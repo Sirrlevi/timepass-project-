@@ -1,20 +1,24 @@
-ROMANTIC STATIC WEBPAGE
+ROMANTIC STATIC WEBPAGE - SINGLE SCREEN
 
-Updated:
-- Entire page is locked to one viewport (100svh) with no vertical scrolling.
-- Layout is scaled to fit the complete design on one phone screen.
-- Top-right video has no border, padding, card, outline or shadow.
-- A tiny 2px left crop removes an encoded-video edge seam.
-- Put your local song at: track1.mp3
-- Song volume is set to 42%.
-- Audio requests autoplay immediately. Mobile browsers may still prohibit
-  audible autoplay until user interaction; if that happens, the first tap/
-  interaction starts it automatically. No visible controls are shown.
-- Footer remains static and uses a recessed laser-engraved effect.
+Files:
+- index.html
+- style.css
+- script.js
 
-Existing remote assets:
-Top-right video:
-https://files.catbox.moe/qdc3x7.mp4
+Required local audio:
+- Put your song at: track1.mp3
+- Keep track1.mp3 in the SAME folder as index.html.
 
-Middle couple:
-https://files.catbox.moe/l9xdjq.png
+AUDIO BEHAVIOR:
+- No vinyl-specific tap/click dependency.
+- The page requests audible autoplay immediately.
+- If the browser allows audible autoplay, the song starts on page load/refresh.
+- If the browser blocks audible autoplay (common on mobile Chrome/Safari), ANY first
+  interaction anywhere on the page unlocks the audio. You do NOT need to tap the vinyl.
+- The unlock listener remains active until playback actually succeeds.
+- Volume is 42%.
+- No visible audio controls are shown.
+
+IMPORTANT:
+No website can reliably force audible autoplay against a browser's autoplay policy.
+That restriction is controlled by the browser, not JavaScript.

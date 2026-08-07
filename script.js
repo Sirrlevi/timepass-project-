@@ -13,21 +13,54 @@ song.autoplay = true;
 song.loop = true;
 song.preload = "auto";
 
-// Request audible autoplay immediately.
-// Note: modern mobile browsers can still block unmuted autoplay.
-// If blocked, the first user interaction starts it; no player controls are shown.
-const tryStartSong = () => {
-  song.play().catch(() => {});
-};
+/*
+  IMPORTANT:
+  There is NO vinyl-specific click/tap handler.
+  We request audible autoplay immediately. If the browser blocks
+  audible autoplay, ANY user interaction anywhere on the page can
+  unlock the audio. The listener stays active until play() succeeds.
+*/
+let audioStarted = false;
 
-tryStartSong();
+async function tryStartSong() {
+  if (audioStarted) return true;
+
+  try {
+    await song.play();
+    audioStarted = true;
+    removeAudioUnlockListeners();
+    return true;
+  } catch (_) {
+    // Browser autoplay policy blocked it. Keep waiting for interaction.
+    return false;
+  }
+}
+
+function handleFirstInteraction() {
+  tryStartSong();
+}
+
+function removeAudioUnlockListeners() {
+  ["pointerdown", "touchstart", "click", "keydown"].forEach((eventName) => {
+    window.removeEventListener(eventName, handleFirstInteraction, true);
+  });
+}
 
 ["pointerdown", "touchstart", "click", "keydown"].forEach((eventName) => {
-  document.addEventListener(eventName, tryStartSong, {
-    once: true,
-    passive: true
+  window.addEventListener(eventName, handleFirstInteraction, {
+    passive: true,
+    capture: true
   });
 });
+
+// Attempt autoplay as soon as possible.
+tryStartSong();
+
+// Retry when the page becomes visible/active again.
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) tryStartSong();
+});
+window.addEventListener("pageshow", tryStartSong);
 
 cornerVideo.play().catch(() => {});
 
@@ -53,7 +86,7 @@ const loveLines = [
   "Eu te amo muito, Sana",              // Portuguese
   "Ik hou zoveel van Sana",             // Dutch
   "Jag älskar Sana så mycket",          // Swedish
-  "Jeg elsker Sana så høyt",            // Norwegian
+  "Jeg elsker Sana så høyt",             // Norwegian
   "Jeg elsker Sana så meget",           // Danish
   "Sana, te iubesc atât de mult",       // Romanian
   "Sana, volim te mnogo",               // Serbian/Croatian
