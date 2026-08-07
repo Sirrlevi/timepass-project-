@@ -484,3 +484,138 @@ body {
     animation: none !important;
   }
 }
+
+
+/* ---------- INITIAL BALLOON TRIGGER ---------- */
+
+.balloon-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  transition: opacity .65s ease, visibility .65s ease;
+}
+
+.balloon-overlay.burst-away {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.balloon-prompt {
+  position: relative;
+  top: -8vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+
+.balloon {
+  position: relative;
+  width: clamp(86px, 13vw, 145px);
+  aspect-ratio: .82;
+  border-radius: 50% 50% 47% 47%;
+  cursor: pointer;
+  outline: none;
+  background:
+    radial-gradient(circle at 32% 23%, rgba(255,255,255,.55) 0 7%, transparent 8%),
+    radial-gradient(circle at 42% 35%, rgba(255,255,255,.13), transparent 32%),
+    linear-gradient(145deg, #ef8eaa 0%, #d75d82 48%, #b93f67 100%);
+  box-shadow:
+    inset -12px -14px 22px rgba(112,33,59,.17),
+    inset 8px 8px 15px rgba(255,255,255,.15),
+    0 14px 28px rgba(112,42,68,.15);
+  animation: balloonFloat 2.8s ease-in-out infinite;
+  transform-origin: 50% 82%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.balloon::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 15px;
+  height: 15px;
+  transform: translateX(-50%) rotate(45deg);
+  background: #bd466c;
+  border-radius: 2px 0 2px 0;
+}
+
+.balloon-knot {
+  position: absolute;
+  left: 50%;
+  bottom: -17px;
+  width: 2px;
+  height: 28px;
+  transform: translateX(-50%);
+  background: rgba(119,55,77,.55);
+}
+
+.balloon-shine {
+  position: absolute;
+  left: 23%;
+  top: 16%;
+  width: 15%;
+  height: 27%;
+  border-radius: 50%;
+  transform: rotate(28deg);
+  background: rgba(255,255,255,.24);
+  filter: blur(1px);
+}
+
+.balloon-text {
+  color: var(--romantic-dark);
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(18px, 2.3vw, 31px);
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-align: center;
+  animation: promptPulse 2.4s ease-in-out infinite;
+}
+
+.balloon-overlay.is-bursting .balloon {
+  animation: balloonBurst .5s cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.balloon-overlay.is-bursting .balloon-text {
+  animation: promptDisappear .35s ease forwards;
+}
+
+@keyframes balloonFloat {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes promptPulse {
+  0%, 100% { opacity: .72; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+
+@keyframes balloonBurst {
+  0% { transform: scale(1); opacity: 1; }
+  35% { transform: scale(1.16); opacity: 1; }
+  55% { transform: scale(.9); opacity: .9; }
+  100% { transform: scale(2.25); opacity: 0; }
+}
+
+@keyframes promptDisappear {
+  to { opacity: 0; transform: translateY(-12px); }
+}
+
+@media (max-width: 650px) {
+  .balloon-prompt {
+    top: -6vh;
+    gap: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .balloon,
+  .balloon-text {
+    animation: none !important;
+  }
+}
