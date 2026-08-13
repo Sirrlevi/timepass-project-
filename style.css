@@ -3,10 +3,14 @@
 }
 
 :root {
-  --bg: #DEE1D3;
-  --romantic: #b84c70;
-  --romantic-dark: #7d304e;
-  --ink: #68404f;
+  --bg: #F8E9EE;
+  --bg-deep: #F1DCE4;
+  --romantic: #C2486F;
+  --romantic-dark: #7A2C48;
+  --gold: #C9A15C;
+  --gold-light: #EBD6A4;
+  --ink: #5C2A3D;
+  --shine: #FFF8F5;
 }
 
 html,
@@ -30,7 +34,10 @@ body {
   min-height: 100svh;
   isolation: isolate;
   overflow: hidden;
-  background: var(--bg);
+  background:
+    radial-gradient(120% 90% at 12% 0%, var(--shine) 0%, transparent 55%),
+    radial-gradient(130% 100% at 100% 100%, var(--bg-deep) 0%, transparent 60%),
+    var(--bg);
   display: grid;
   grid-template-rows: 26% 11% 39% 12% 12%;
 }
@@ -67,9 +74,10 @@ body {
       #211d23 5px
     );
   box-shadow:
-    0 12px 26px rgba(73, 42, 56, .18),
+    0 14px 30px rgba(73, 42, 56, .22),
+    0 0 0 2px rgba(201,161,92,.35),
     inset 0 0 0 5px rgba(255,255,255,.05);
-  animation: vinylSpin 8s linear infinite;
+  animation: vinylSpin 9s linear infinite;
 }
 
 .vinyl::before {
@@ -93,7 +101,7 @@ body {
   font-family: Georgia, serif;
   font-size: clamp(16px, 2.1vw, 30px);
   background: radial-gradient(circle, #c85b7e 0 55%, #8f3658 56% 100%);
-  box-shadow: 0 0 0 5px #211d23;
+  box-shadow: 0 0 0 4px #211d23, 0 0 0 5px rgba(201,161,92,.4);
 }
 
 .vinyl-shine {
@@ -169,6 +177,20 @@ body {
   padding: 0;
 }
 
+.corner-video::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--bg) 0%,
+    rgba(248, 233, 238, .55) 4%,
+    transparent 14%
+  );
+}
+
 .corner-video video {
   display: block;
   position: absolute;
@@ -201,13 +223,13 @@ body {
   padding: 0 10px;
   max-width: 94%;
   text-align: center;
-  color: var(--romantic);
-  font-family: "Playfair Display", Georgia, serif;
-  font-weight: 600;
-  font-size: clamp(24px, 4.3vw, 60px);
-  line-height: 1.05;
-  letter-spacing: .015em;
-  text-shadow: 0 2px 0 rgba(255,255,255,.38);
+  color: var(--romantic-dark);
+  font-family: "Mrs Saint Delafield", "Playfair Display", cursive;
+  font-weight: 400;
+  font-size: clamp(30px, 5.6vw, 74px);
+  line-height: 1.1;
+  letter-spacing: .01em;
+  text-shadow: 0 2px 0 rgba(255,255,255,.45), 0 10px 24px rgba(122,44,72,.1);
   animation: gentleFloat 4.5s ease-in-out infinite;
   transition: opacity .65s ease, transform .65s ease;
 }
@@ -253,8 +275,9 @@ body {
   min-height: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 9%;
+  justify-content: center;
+  gap: clamp(14px, 4vw, 34px);
+  padding: 0 7%;
   z-index: 8;
 }
 
@@ -262,9 +285,9 @@ body {
   color: var(--romantic);
   font-family: "Playfair Display", Georgia, serif;
   font-weight: 700;
-  font-size: clamp(27px, 4.1vw, 58px);
+  font-size: clamp(24px, 3.8vw, 54px);
   line-height: 1;
-  letter-spacing: .035em;
+  letter-spacing: .05em;
   text-shadow:
     0 2px 0 rgba(255,255,255,.5),
     0 4px 12px rgba(115,40,65,.08);
@@ -276,6 +299,37 @@ body {
 
 .neeraj {
   animation: tinyBreath 4s ease-in-out 1.5s infinite;
+}
+
+.monogram {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(38px, 5.6vw, 62px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  animation: monogramGlow 4s ease-in-out infinite;
+}
+
+.monogram-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(201,161,92,.75);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.5),
+    0 4px 14px rgba(122,44,72,.14);
+  background: radial-gradient(circle, var(--shine) 0%, var(--bg-deep) 100%);
+}
+
+.monogram-amp {
+  position: relative;
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 600;
+  font-style: italic;
+  font-size: clamp(17px, 2.6vw, 28px);
+  color: var(--gold);
+  text-shadow: 0 1px 0 rgba(255,255,255,.6);
 }
 
 /* ---------- FOOTER ---------- */
@@ -361,6 +415,23 @@ body {
 .s2 { right: 13%; top: 48%; animation-delay: -2s; }
 .s3 { left: 77%; top: 77%; animation-delay: -1s; }
 
+.petal {
+  position: absolute;
+  top: -6%;
+  width: 13px;
+  height: 17px;
+  border-radius: 60% 10% 60% 10%;
+  background: linear-gradient(155deg, #f2b6c8 0%, #d8799c 100%);
+  opacity: .8;
+  filter: drop-shadow(0 3px 4px rgba(126,48,76,.1));
+  animation: petalFall linear infinite;
+}
+
+.p1 { left: 22%; animation-duration: 13s; animation-delay: -1s; transform: scale(.85); }
+.p2 { left: 58%; animation-duration: 16s; animation-delay: -6s; transform: scale(1.1); }
+.p3 { left: 78%; animation-duration: 12s; animation-delay: -3s; transform: scale(.75); }
+.p4 { left: 40%; animation-duration: 18s; animation-delay: -9s; transform: scale(.95); }
+
 /* ---------- LOVE FADE ---------- */
 
 .love-fade-out {
@@ -396,6 +467,19 @@ body {
 @keyframes sparkle {
   0%, 100% { opacity: .35; transform: scale(.9) rotate(0deg); }
   50% { opacity: .86; transform: scale(1.15) rotate(12deg); }
+}
+
+@keyframes petalFall {
+  0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+  8% { opacity: .8; }
+  50% { transform: translateY(52svh) translateX(18px) rotate(160deg); }
+  92% { opacity: .7; }
+  100% { transform: translateY(108svh) translateX(-10px) rotate(320deg); opacity: 0; }
+}
+
+@keyframes monogramGlow {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(201,161,92,0)); }
+  50% { filter: drop-shadow(0 0 6px rgba(201,161,92,.45)); }
 }
 
 @keyframes loveFadeIn {
@@ -480,7 +564,9 @@ body {
   .love-line,
   .name,
   .heart,
-  .spark {
+  .spark,
+  .petal,
+  .monogram {
     animation: none !important;
   }
 }
@@ -549,10 +635,10 @@ body {
   position: absolute;
   left: 50%;
   bottom: -17px;
-  width: 2px;
+  width: 1.5px;
   height: 28px;
   transform: translateX(-50%);
-  background: rgba(119,55,77,.55);
+  background: linear-gradient(rgba(201,161,92,.75), rgba(119,55,77,.45));
 }
 
 .balloon-shine {
