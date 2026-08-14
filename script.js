@@ -19,6 +19,7 @@ const musicPlayer = document.querySelector(".music-player");
 const songSwitch = document.getElementById("songSwitch");
 const songToast = document.getElementById("songToast");
 const introCurtain = document.getElementById("introCurtain");
+const slapSfx = document.getElementById("slapSfx");
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let songIndex = 0;
@@ -86,48 +87,17 @@ function triggerIntroSlap() {
 
 
 function playSlapSound() {
-  // Best-effort browser-generated slap: no external audio dependency.
-  // Mobile browsers can block sound before a user gesture; the balloon tap
-  // later still provides the required user gesture for the song.
+  if (!slapSfx) return;
+
+  // The bundled SFX is fired at the exact visual contact frame.
+  // Resetting currentTime keeps repeat/reload behaviour deterministic.
   try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-
-    const ctx = new AudioContextClass();
-    const now = ctx.currentTime;
-
-    const buffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.16), ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < data.length; i++) {
-      const t = i / data.length;
-      const envelope = Math.pow(1 - t, 5);
-      const noise = (Math.random() * 2 - 1);
-      const low = Math.sin(2 * Math.PI * 115 * (i / ctx.sampleRate));
-      data[i] = (noise * 0.72 + low * 0.28) * envelope;
+    slapSfx.currentTime = 0;
+    slapSfx.volume = 0.9;
+    const playPromise = slapSfx.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
     }
-
-    const source = ctx.createBufferSource();
-    const gain = ctx.createGain();
-    const filter = ctx.createBiquadFilter();
-
-    source.buffer = buffer;
-    filter.type = "bandpass";
-    filter.frequency.value = 1350;
-    filter.Q.value = 0.8;
-
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.72, now + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.145);
-
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    source.start(now);
-
-    setTimeout(() => {
-      try { ctx.close(); } catch (_) {}
-    }, 300);
   } catch (_) {}
 }
 

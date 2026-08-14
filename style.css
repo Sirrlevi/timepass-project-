@@ -922,63 +922,22 @@ body {
 
 .intro-hand {
   position: absolute;
-  left: 38%;
+  left: 50%;
   top: 54%;
-  width: 138px;
-  height: 112px;
-  transform: translate(-135%, -50%) rotate(-17deg) scale(.9);
+  width: min(42vw, 360px);
+  height: auto;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  transform: translate(-145%, -50%) rotate(-17deg) scale(.82);
+  transform-origin: 58% 58%;
   opacity: 0;
   z-index: 12;
-  filter: drop-shadow(0 10px 12px rgba(0,0,0,.28));
-  animation: handSlap 2.75s cubic-bezier(.28,.08,.16,1) .45s forwards;
+  filter: drop-shadow(0 16px 16px rgba(0,0,0,.30));
+  user-select: none;
+  -webkit-user-drag: none;
+  animation: handSlap 2.72s cubic-bezier(.28,.08,.16,1) .45s forwards;
 }
-
-.intro-hand-palm {
-  position: absolute;
-  left: 28px;
-  top: 34px;
-  width: 66px;
-  height: 50px;
-  border-radius: 48% 52% 46% 50%;
-  background:
-    radial-gradient(circle at 30% 25%, rgba(255,220,204,.34), transparent 32%),
-    linear-gradient(145deg, #e0a18d 0%, #d18b78 58%, #ad665e 100%);
-  box-shadow:
-    inset 7px 5px 8px rgba(255,230,217,.18),
-    inset -8px -7px 9px rgba(95,42,50,.18),
-    0 3px 6px rgba(71,30,38,.16);
-}
-
-.intro-hand-palm::after {
-  content: "";
-  position: absolute;
-  width: 32px;
-  height: 23px;
-  right: -15px;
-  bottom: -5px;
-  border-radius: 55% 45% 55% 45%;
-  background: linear-gradient(145deg, #dfa08b, #b86e64);
-  transform: rotate(30deg);
-  box-shadow: inset -4px -3px 5px rgba(95,42,50,.14);
-}
-
-.intro-finger {
-  position: absolute;
-  width: 17px;
-  height: 58px;
-  border-radius: 12px 12px 9px 9px;
-  background:
-    linear-gradient(90deg, rgba(255,230,217,.2), transparent 45%),
-    linear-gradient(150deg, #e1a18d 0%, #d18a77 60%, #ae655e 100%);
-  box-shadow:
-    inset -3px -3px 4px rgba(95,42,50,.13),
-    0 2px 3px rgba(71,30,38,.1);
-  transform-origin: bottom center;
-}
-.intro-finger.f1 { left: 24px; top: 4px; transform: rotate(-23deg); height: 53px; }
-.intro-finger.f2 { left: 43px; top: -7px; transform: rotate(-9deg); height: 63px; }
-.intro-finger.f3 { left: 63px; top: -5px; transform: rotate(7deg); height: 61px; }
-.intro-finger.f4 { left: 83px; top: 5px; transform: rotate(21deg); height: 53px; }
 
 .intro-impact {
   position: absolute;
@@ -1138,7 +1097,8 @@ body {
   }
 
   .intro-hand {
-    transform: translate(-135%, -50%) rotate(-17deg) scale(.72);
+    width: min(58vw, 290px);
+    transform: translate(-145%, -50%) rotate(-17deg) scale(.78);
   }
 }
 
