@@ -1,117 +1,128 @@
 exports.handler = async (event) => {
+  const json = (statusCode, body) => ({
+    statusCode,
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store"
+    },
+    body: JSON.stringify(body)
+  });
+
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Method not allowed" })
-    };
+    return json(405, { ok: false, error: "Method not allowed" });
   }
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId) {
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Telegram environment variables are not configured" })
-    };
+    return json(500, {
+      ok: false,
+      error: "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID"
+    });
   }
 
   let data;
   try {
     data = JSON.parse(event.body || "{}");
   } catch (_) {
-    return {
-      statusCode: 400,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Invalid JSON" })
-    };
+    return json(400, { ok: false, error: "Invalid JSON" });
   }
 
-  // Only accept telemetry after the frontend's explicit consent control.
-  if (!data || !data.type) {
-    return {
-      statusCode: 400,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Missing telemetry type" })
-    };
-  }
+  const headers = Object.fromEntries(
+    Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
+  );
 
-  const forwarded = event.headers["x-forwarded-for"] || "";
-  const netlifyIp = event.headers["x-nf-client-connection-ip"] || "";
-  const ip = netlifyIp || forwarded.split(",")[0].trim() || "unavailable";
+  const forwarded = String(headers["x-forwarded-for"] || "")
+    .split(",")[0].trim();
 
-  const ua = data.userAgent || event.headers["user-agent"] || "unavailable";
-  const location = data.location || {};
+  const ip =
+    headers["x-nf-client-connection-ip"] ||
+    headers["client-ip"] ||
+    forwarded ||
+    "unavailable";
+
   const hints = data.deviceHints || {};
+  const screen = data.screen || {};
+  const viewport = data.viewport || {};
+  const loc = data.location || {};
 
-  const lines = [
-    "💌 Visitor diagnostics",
-    `Type: ${String(data.type).slice(0, 40)}`,
-    `Time: ${String(data.timestamp || new Date().toISOString())}`,
+  const brands = Array.isArray(hints.brands)
+    ? hints.brands.map(x => x.brand).filter(Boolean).join(", ")
+    : "unavailable";
+
+  const events = Array.isArray(data.events) ? data.events : [];
+
+  const message = [
+    "╔══════════════════════════════╗",
+    "║     💌 VISITOR DIAGNOSTICS  ║",
+    "╚══════════════════════════════╝",
     "",
-    `🌐 IP: ${ip}`,
-    `📱 UA: ${String(ua).slice(0, 350)}`,
-    `🧩 Platform: ${data.platform || hints.platform || "unavailable"}`,
-    `📲 Model: ${hints.model || "not exposed by browser"}`,
-    `🏷️ Browser brands: ${Array.isArray(hints.brands) ? hints.brands.map(x => x.brand).join(", ") : "unavailable"}`,
-    `📐 Screen: ${data.screen ? `${data.screen.width}×${data.screen.height} @${data.screen.pixelRatio}x` : "unavailable"}`,
-    `🖥️ Viewport: ${data.viewport ? `${data.viewport.width}×${data.viewport.height}` : "unavailable"}`,
-    `🌍 Language: ${data.language || "unavailable"}`,
-    `🕐 Timezone: ${data.timezone || "unavailable"}`,
-    `📶 Network provider: ${data.networkProvider || "not exposed by browser"}`,
-    ""
-  ];
-
-  if (location.status === "granted") {
-    lines.push(`📍 GPS: ${location.latitude}, ${location.longitude}`);
-    lines.push(`🎯 Accuracy: ~${location.accuracyMeters}m`);
-  } else {
-    lines.push(`📍 GPS: ${location.status || "not provided"}`);
-  }
-
-  if (Array.isArray(data.events) && data.events.length) {
-    lines.push("");
-    lines.push("🖱️ Events:");
-    for (const e of data.events.slice(0, 12)) {
-      lines.push(`• ${String(e.name || "event").slice(0, 60)}`);
-    }
-  }
+    "👤 VISITOR",
+    `• Consent: YES`,
+    `• Received: ${data.timestamp || new Date().toISOString()}`,
+    "",
+    "🌐 NETWORK",
+    `• Public IP: ${ip}`,
+    `• Network provider: ${data.networkProvider || "not exposed by browser"}`,
+    "",
+    "📱 DEVICE",
+    `• Model: ${hints.model || "not exposed"}`,
+    `• Platform: ${hints.platform || data.platform || "unavailable"}`,
+    `• Mobile: ${hints.mobile === true ? "Yes" : hints.mobile === false ? "No" : "unknown"}`,
+    `• Browser brands: ${brands}`,
+    `• User-Agent: ${String(data.userAgent || headers["user-agent"] || "unavailable").slice(0, 500)}`,
+    "",
+    "🖥️ DISPLAY",
+    `• Screen: ${screen.width || "?"} × ${screen.height || "?"}`,
+    `• Pixel ratio: ${screen.pixelRatio || "?"}`,
+    `• Viewport: ${viewport.width || "?"} × ${viewport.height || "?"}`,
+    `• Touch points: ${data.touchPoints ?? "?"}`,
+    "",
+    "🌍 BROWSER",
+    `• Language: ${data.language || "unavailable"}`,
+    `• Timezone: ${data.timezone || "unavailable"}`,
+    `• Referrer: ${data.referrer || "direct / unavailable"}`,
+    `• Page: ${String(data.page || "").slice(0, 500)}`,
+    "",
+    "📍 LOCATION",
+    `• GPS: ${loc.status === "not requested" ? "Not requested — no permission prompt" : (loc.status || "unavailable")}`,
+    "",
+    "🖱️ INTERACTIONS",
+    ...(events.length
+      ? events.slice(0, 20).map(e =>
+          `• ${String(e.name || "event").slice(0, 80)}`
+        )
+      : ["• Initial consent only"]),
+    "",
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  ].join("\n");
 
   const telegramUrl = `https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`;
 
   try {
-    const response = await fetch(telegramUrl, {
+    const tg = await fetch(telegramUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: lines.join("\n"),
+        text: message,
         disable_web_page_preview: true
       })
     });
 
-    const result = await response.json().catch(() => ({}));
+    const result = await tg.json().catch(() => ({}));
 
-    if (!response.ok || !result.ok) {
-      return {
-        statusCode: 502,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Telegram request failed" })
-      };
+    if (!tg.ok || !result.ok) {
+      return json(502, {
+        ok: false,
+        error: "Telegram rejected the message",
+        telegram: result.description || "unknown Telegram error"
+      });
     }
 
-    return {
-      statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ok: true })
-    };
-  } catch (_) {
-    return {
-      statusCode: 502,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Unable to reach Telegram" })
-    };
+    return json(200, { ok: true });
+  } catch (error) {
+    return json(502, { ok: false, error: "Telegram request failed" });
   }
 };

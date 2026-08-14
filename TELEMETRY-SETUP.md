@@ -1,31 +1,40 @@
-# Optional visitor diagnostics — Netlify setup
+# Netlify visitor diagnostics
 
-The page contains a small checkbox in the top-right corner:
+A small checkbox in the top-right corner controls telemetry:
 
 **share visitor diagnostics**
 
-Nothing is sent until the visitor checks it.
+Nothing is sent until it is checked.
 
 ## Netlify environment variables
 
-In Netlify → Site configuration → Environment variables, add:
+Set these in Netlify → Site configuration → Environment variables:
 
-- `TELEGRAM_BOT_TOKEN` = your Telegram bot token
-- `TELEGRAM_CHAT_ID` = the destination chat/channel ID
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_CHAT_ID`
 
-Do NOT put either value in `index.html`, `script.js`, or `telemetry.js`.
+Keep both values server-side. Never paste them into frontend JavaScript.
 
-## What is sent after consent
+## Important location behavior
 
-The browser sends information it can legitimately expose, including:
-- public IP observed server-side by the Netlify Function
-- browser user-agent/platform
-- screen and viewport size
-- language/timezone
-- browser User-Agent Client Hints when available, including model where the browser exposes it
-- interaction events such as balloon burst, song switch, heart-note tap
-- GPS latitude/longitude only if the visitor separately accepts the browser's native location permission prompt
+This version intentionally does **not** call the browser Geolocation API.
 
-Mobile carrier/network provider is not reliably exposed by normal web browsers, so it is reported as unavailable rather than guessed.
+Therefore checking the box does **not** trigger the browser's location permission popup.
 
-Unchecking the box removes the saved consent flag and stops future telemetry.
+The Telegram message will explicitly report:
+
+`GPS: Not requested — no permission prompt`
+
+A normal webpage cannot silently obtain precise GPS coordinates without the browser's location permission mechanism.
+
+## Immediate delivery
+
+When the checkbox is checked, the initial diagnostics request is sent immediately to:
+
+`/.netlify/functions/telemetry`
+
+The Netlify Function formats the data into a structured Telegram text message.
+
+## Browser limitations
+
+The standard browser APIs do not reliably expose mobile carrier/network provider. Device model is also only available when the browser provides the relevant User-Agent Client Hints.

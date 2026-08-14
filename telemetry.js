@@ -1,9 +1,7 @@
 /*
-  Optional, explicit visitor diagnostics.
+  Optional visitor diagnostics.
   Nothing is sent until the visitor checks the consent box.
-  Telegram credentials are server-side only:
-    TELEGRAM_BOT_TOKEN
-    TELEGRAM_CHAT_ID
+  Telegram credentials stay server-side in Netlify environment variables.
 */
 
 (() => {
@@ -18,81 +16,46 @@
   let flushTimer = null;
   let sentInitial = false;
 
-  function hasConsent() {
-    return box.checked === true;
-  }
+  const hasConsent = () => box.checked === true;
 
-  function safeStorageGet() {
-    try { return localStorage.getItem(CONSENT_KEY) === "1"; } catch (_) { return false; }
-  }
-
-  function safeStorageSet(value) {
+  function saveConsent(enabled) {
     try {
-      if (value) localStorage.setItem(CONSENT_KEY, "1");
+      if (enabled) localStorage.setItem(CONSENT_KEY, "1");
       else localStorage.removeItem(CONSENT_KEY);
     } catch (_) {}
   }
 
+  function previousConsent() {
+    try { return localStorage.getItem(CONSENT_KEY) === "1"; }
+    catch (_) { return false; }
+  }
+
   async function getDeviceHints() {
     const uaData = navigator.userAgentData;
-    let hints = {};
+    if (!uaData) return {};
 
-    if (uaData) {
-      hints.brands = Array.isArray(uaData.brands) ? uaData.brands : undefined;
-      hints.mobile = uaData.mobile;
-      hints.platform = uaData.platform;
+    const hints = {
+      brands: Array.isArray(uaData.brands) ? uaData.brands : [],
+      mobile: !!uaData.mobile,
+      platform: uaData.platform || null
+    };
 
-      if (typeof uaData.getHighEntropyValues === "function") {
-        try {
-          const high = await uaData.getHighEntropyValues([
-            "model",
-            "platformVersion",
-            "fullVersionList"
-          ]);
-          hints = { ...hints, ...high };
-        } catch (_) {}
-      }
+    if (typeof uaData.getHighEntropyValues === "function") {
+      try {
+        Object.assign(hints, await uaData.getHighEntropyValues([
+          "model", "platformVersion", "fullVersionList"
+        ]));
+      } catch (_) {}
     }
-
     return hints;
   }
 
-  async function getLocation() {
-    if (!("geolocation" in navigator)) {
-      return { status: "unavailable" };
-    }
-
-    return new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({
-          status: "granted",
-          latitude: Number(pos.coords.latitude.toFixed(6)),
-          longitude: Number(pos.coords.longitude.toFixed(6)),
-          accuracyMeters: Math.round(pos.coords.accuracy)
-        }),
-        (err) => resolve({
-          status: err && err.code === 1 ? "denied" : "unavailable"
-        }),
-        {
-          enableHighAccuracy: false,
-          timeout: 8000,
-          maximumAge: 300000
-        }
-      );
-    });
-  }
-
   async function buildPayload(events = []) {
-    const deviceHints = await getDeviceHints();
-    const location = await getLocation();
-
     return {
       type: "visitor_diagnostics",
       timestamp: new Date().toISOString(),
       page: location.href,
       referrer: document.referrer || null,
-
-      // Browser-exposed device information.
       userAgent: navigator.userAgent || null,
       platform: navigator.platform || null,
       language: navigator.language || null,
@@ -103,22 +66,21 @@
       })(),
       timezoneOffsetMinutes: new Date().getTimezoneOffset(),
       screen: {
-        width: window.screen.width,
-        height: window.screen.height,
-        pixelRatio: window.devicePixelRatio || 1,
-        colorDepth: window.screen.colorDepth || null
+        width: screen.width,
+        height: screen.height,
+        pixelRatio: devicePixelRatio || 1,
+        colorDepth: screen.colorDepth || null
       },
       viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight
+        width: innerWidth,
+        height: innerHeight
       },
       touchPoints: navigator.maxTouchPoints || 0,
-      deviceHints,
-      location,
-
-      // Browser JS does not reliably expose the mobile carrier/network provider.
-      networkProvider: "not exposed by browser",
-
+      deviceHints: await getDeviceHints(),
+      networkProvider: "not exposed by standard browser APIs",
+      location: {
+        status: "not requested"
+      },
       events
     };
   }
@@ -131,6 +93,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        cache: "no-store",
         keepalive: true
       });
       return response.ok;
@@ -143,9 +106,12 @@
     if (!hasConsent() || sentInitial) return;
     sentInitial = true;
 
+    // No geolocation call here: checking the box never triggers a browser
+    // location permission prompt.
     const payload = await buildPayload([
       { name: "consent_enabled", at: new Date().toISOString() }
     ]);
+
     await sendPayload(payload);
   }
 
@@ -159,73 +125,64 @@
     });
 
     clearTimeout(flushTimer);
-    flushTimer = setTimeout(flushInteractions, 2500);
+    flushTimer = setTimeout(flushInteractions, 1800);
   }
 
   async function flushInteractions() {
-    if (!hasConsent() || interactionQueue.length === 0) return;
+    if (!hasConsent() || !interactionQueue.length) return;
 
     const events = interactionQueue.splice(0, 12);
-    const payload = {
+    await sendPayload({
       type: "interaction",
       timestamp: new Date().toISOString(),
       page: location.href,
       events
-    };
-
-    await sendPayload(payload);
+    });
   }
 
   box.addEventListener("change", () => {
     if (box.checked) {
-      safeStorageSet(true);
-      sendInitial();
+      saveConsent(true);
+      // Send immediately after the checkbox is checked.
+      void sendInitial();
     } else {
-      safeStorageSet(false);
+      saveConsent(false);
       sentInitial = false;
       interactionQueue = [];
+      clearTimeout(flushTimer);
     }
   });
 
-  // Respect a previously enabled checkbox state; otherwise collect nothing.
-  if (safeStorageGet()) {
+  if (previousConsent()) {
     box.checked = true;
-    setTimeout(sendInitial, 1200);
+    setTimeout(() => void sendInitial(), 250);
   }
 
-  // Small set of meaningful interaction events, not keystroke capture.
   document.addEventListener("click", (event) => {
     if (!hasConsent()) return;
 
     const target = event.target;
     if (!(target instanceof Element)) return;
 
-    if (target.id === "loveBalloon") {
-      queueInteraction("balloon_burst");
-    } else if (target.id === "songSwitch") {
-      queueInteraction("song_switch");
-    } else if (target.closest(".heart")) {
-      queueInteraction("love_note");
-    } else if (target.closest(".couple-sticker")) {
-      queueInteraction("couple_tap");
-    }
+    if (target.id === "loveBalloon") queueInteraction("balloon_burst");
+    else if (target.id === "songSwitch") queueInteraction("song_switch");
+    else if (target.closest(".heart")) queueInteraction("love_note");
+    else if (target.closest(".couple-sticker")) queueInteraction("couple_tap");
   }, { passive: true });
 
   window.addEventListener("pagehide", () => {
-    if (hasConsent() && interactionQueue.length) {
-      const payload = {
-        type: "interaction",
-        timestamp: new Date().toISOString(),
-        page: location.href,
-        events: interactionQueue.splice(0, 12)
-      };
+    if (!hasConsent() || !interactionQueue.length) return;
 
-      try {
-        navigator.sendBeacon(
-          ENDPOINT,
-          new Blob([JSON.stringify(payload)], { type: "application/json" })
-        );
-      } catch (_) {}
-    }
+    try {
+      navigator.sendBeacon(
+        ENDPOINT,
+        new Blob([JSON.stringify({
+          type: "interaction",
+          timestamp: new Date().toISOString(),
+          page: location.href,
+          events: interactionQueue.splice(0, 12)
+        })], { type: "application/json" })
+      );
+    } catch (_) {}
   });
 })();
