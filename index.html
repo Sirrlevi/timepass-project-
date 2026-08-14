@@ -12,6 +12,13 @@
 </head>
 <body>
 
+  <!-- Page-load reveal: soft curtain parts to unveil the page -->
+  <div class="intro-curtain" id="introCurtain" aria-hidden="true">
+    <div class="intro-panel intro-left"></div>
+    <div class="intro-panel intro-right"></div>
+    <div class="intro-mark">♥</div>
+  </div>
+
   <!-- Initial interactive balloon trigger -->
   <div class="balloon-overlay" id="balloonOverlay">
     <div class="balloon-prompt">
@@ -26,23 +33,23 @@
 
 
   <!-- Decorative romantic background. These stay behind all main content. -->
-  <div class="romance-bg" aria-hidden="true">
-    <span class="heart h1">♥</span>
-    <span class="heart h2">♡</span>
-    <span class="heart h3">♥</span>
-    <span class="heart h4">♡</span>
-    <span class="heart h5">♥</span>
-    <span class="heart h6">♡</span>
-    <span class="heart h7">♥</span>
-    <span class="heart h8">♡</span>
-    <span class="spark s1">✦</span>
-    <span class="spark s2">✧</span>
-    <span class="spark s3">✦</span>
-    <span class="petal p1"></span>
-    <span class="petal p2"></span>
-    <span class="petal p3"></span>
-    <span class="petal p4"></span>
-    <span class="bow b1">🎀</span>
+  <div class="romance-bg">
+    <span class="heart h1" role="button" tabindex="0" aria-label="Tap for a love note">♥</span>
+    <span class="heart h2" role="button" tabindex="0" aria-label="Tap for a love note">♡</span>
+    <span class="heart h3" role="button" tabindex="0" aria-label="Tap for a love note">♥</span>
+    <span class="heart h4" role="button" tabindex="0" aria-label="Tap for a love note">♡</span>
+    <span class="heart h5" role="button" tabindex="0" aria-label="Tap for a love note">♥</span>
+    <span class="heart h6" role="button" tabindex="0" aria-label="Tap for a love note">♡</span>
+    <span class="heart h7" role="button" tabindex="0" aria-label="Tap for a love note">♥</span>
+    <span class="heart h8" role="button" tabindex="0" aria-label="Tap for a love note">♡</span>
+    <span class="spark s1" aria-hidden="true">✦</span>
+    <span class="spark s2" aria-hidden="true">✧</span>
+    <span class="spark s3" aria-hidden="true">✦</span>
+    <span class="petal p1" aria-hidden="true"></span>
+    <span class="petal p2" aria-hidden="true"></span>
+    <span class="petal p3" aria-hidden="true"></span>
+    <span class="petal p4" aria-hidden="true"></span>
+    <span class="bow b1" aria-hidden="true">🎀</span>
   </div>
 
   <main class="page">
@@ -60,7 +67,10 @@
           <span class="tonearm-head"></span>
         </div>
         <div class="player-caption">a little song for you</div>
+        <button class="song-switch" id="songSwitch" type="button" aria-label="Change song">♪</button>
       </div>
+
+      <div class="song-toast" id="songToast"></div>
 
       <!-- Seamless Catbox video -->
       <div class="corner-video">
@@ -75,7 +85,7 @@
         </video>
       </div>
 
-      <!-- Change only this line in script.js when you have your Catbox song URL. -->
+      <!-- Song source is set from the SONGS list in script.js -->
       <audio id="loveSong" autoplay loop preload="auto" src="track1.mp3"></audio>
 
     </section>
