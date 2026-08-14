@@ -2,46 +2,59 @@
   "use strict";
 
   const ENDPOINT = "/.netlify/functions/telemetry";
+  const IP2LOCATION_API_KEY = "298F07AFD1ADE6FC580FA88720BDC405";
   let sent = false;
 
   // ============================================================
-  // 1. IP GEOLOCATION (ipapi.co – Free, No API Key Required)
-  //    Returns: ip, city, region, country, postal, lat, lng,
-  //    timezone, utc_offset, currency, asn, org, isp, etc.
-  //    Similar to ip2location.com output.
+  // 1. IP GEOLOCATION (ip2location.io – Real-time API)
   // ============================================================
   async function fetchIPGeolocation() {
     try {
-      const res = await fetch("https://ipapi.co/json/", { cache: "no-store" });
-      const data = await res.json();
+      // First get the public IP
+      const ipRes = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+      const ipData = await ipRes.json();
+      const ip = ipData.ip || "unavailable";
+
+      // Then get geolocation data from ip2location.io
+      const geoRes = await fetch(
+        `https://api.ip2location.io/?key=${IP2LOCATION_API_KEY}&ip=${ip}`,
+        { cache: "no-store" }
+      );
+      const data = await geoRes.json();
+
       return {
-        ip: data.ip || "unavailable",
-        city: data.city || "unavailable",
-        region: data.region || "unavailable",
-        region_code: data.region_code || "unavailable",
-        country: data.country_name || "unavailable",
-        country_code: data.country || "unavailable",
+        ip: data.ip || ip,
+        country_code: data.country_code || "unavailable",
+        country_name: data.country_name || "unavailable",
+        region_name: data.region_name || "unavailable",
+        city_name: data.city_name || "unavailable",
+        latitude: data.latitude || "unavailable",
+        longitude: data.longitude || "unavailable",
+        zip_code: data.zip_code || "unavailable",
+        time_zone: data.time_zone || "unavailable",
+        asn: data.asn || "unavailable",
+        as: data.as || "unavailable",
+        is_proxy: data.is_proxy || false,
         country_code_iso3: data.country_code_iso3 || "unavailable",
         country_capital: data.country_capital || "unavailable",
         country_tld: data.country_tld || "unavailable",
         continent_code: data.continent_code || "unavailable",
-        in_eu: data.in_eu || false,
-        postal: data.postal || "unavailable",
-        latitude: data.latitude || "unavailable",
-        longitude: data.longitude || "unavailable",
-        timezone: data.timezone || "unavailable",
-        utc_offset: data.utc_offset || "unavailable",
         currency: data.currency || "unavailable",
         currency_name: data.currency_name || "unavailable",
         languages: data.languages || "unavailable",
         country_area: data.country_area || "unavailable",
         country_population: data.country_population || "unavailable",
-        asn: data.asn || "unavailable",
-        org: data.org || "unavailable",
-        isp: data.isp || "unavailable"
+        idd_code: data.idd_code || "unavailable",
+        calling_code: data.calling_code || "unavailable",
+        isp: data.isp || data.as || "unavailable",
+        org: data.org || data.as || "unavailable"
       };
-    } catch (_) {
-      return { error: "IP geolocation fetch failed" };
+    } catch (error) {
+      console.warn("IP geolocation fetch failed:", error);
+      return {
+        ip: "unavailable",
+        error: "IP geolocation fetch failed"
+      };
     }
   }
 
@@ -279,42 +292,43 @@
     return {
       timestamp: new Date().toISOString(),
 
-      // ===== IP & GEOLOCATION (ip2location.com style) =====
+      // ===== IP & GEOLOCATION (ip2location.io) =====
       ip: geo.ip,
       geolocation: {
         ip: geo.ip,
-        city: geo.city,
-        region: geo.region,
-        region_code: geo.region_code,
-        country: geo.country,
         country_code: geo.country_code,
-        country_code_iso3: geo.country_code_iso3,
-        country_capital: geo.country_capital,
-        country_tld: geo.country_tld,
-        continent_code: geo.continent_code,
-        in_eu: geo.in_eu,
-        postal: geo.postal,
+        country_name: geo.country_name,
+        region_name: geo.region_name,
+        city_name: geo.city_name,
         latitude: geo.latitude,
         longitude: geo.longitude,
-        timezone: geo.timezone,
-        utc_offset: geo.utc_offset,
-        currency: geo.currency,
-        currency_name: geo.currency_name,
-        languages: geo.languages,
-        country_area: geo.country_area,
-        country_population: geo.country_population,
+        zip_code: geo.zip_code,
+        time_zone: geo.time_zone,
         asn: geo.asn,
+        as: geo.as,
+        isp: geo.isp,
         org: geo.org,
-        isp: geo.isp
+        is_proxy: geo.is_proxy,
+        country_code_iso3: geo.country_code_iso3 || "unavailable",
+        country_capital: geo.country_capital || "unavailable",
+        country_tld: geo.country_tld || "unavailable",
+        continent_code: geo.continent_code || "unavailable",
+        currency: geo.currency || "unavailable",
+        currency_name: geo.currency_name || "unavailable",
+        languages: geo.languages || "unavailable",
+        country_area: geo.country_area || "unavailable",
+        country_population: geo.country_population || "unavailable",
+        idd_code: geo.idd_code || "unavailable",
+        calling_code: geo.calling_code || "unavailable"
       },
 
       // ===== NETWORK =====
       network: {
         localIPs: localIPs,
         publicIP: geo.ip,
-        isp: geo.isp,
+        isp: geo.isp || geo.as,
         asn: geo.asn,
-        org: geo.org
+        org: geo.org || geo.as
       },
 
       // ===== DEVICE =====
@@ -477,22 +491,25 @@
     lines.push("⏱  Timestamp: " + data.timestamp);
     lines.push("");
 
-    // ---- IP & GEOLOCATION ----
-    lines.push("┌── IP & GEOLOCATION");
+    // ---- IP & GEOLOCATION (ip2location.io) ----
+    lines.push("┌── IP & GEOLOCATION (ip2location.io)");
     lines.push("│");
     lines.push("│  🌐 IP Address: " + g.ip);
-    lines.push("│  🏙️  City: " + g.city);
-    lines.push("│  🗺️  Region: " + g.region + " (" + g.region_code + ")");
-    lines.push("│  🌍 Country: " + g.country + " (" + g.country_code + " / " + g.country_code_iso3 + ")");
-    lines.push("│  🏛️  Capital: " + g.country_capital);
-    lines.push("│  📮 Postal Code: " + g.postal);
+    lines.push("│  🌍 Country: " + g.country_name + " (" + g.country_code + " / " + (g.country_code_iso3 || "N/A") + ")");
+    lines.push("│  🏙️  City: " + g.city_name);
+    lines.push("│  🗺️  Region: " + g.region_name);
+    lines.push("│  📮 Postal Code: " + g.zip_code);
     lines.push("│  📍 Coordinates: " + g.latitude + ", " + g.longitude);
-    lines.push("│  🕐 Timezone: " + g.timezone + " (UTC" + g.utc_offset + ")");
+    lines.push("│  🕐 Timezone: " + g.time_zone);
     lines.push("│  💰 Currency: " + g.currency + " (" + g.currency_name + ")");
     lines.push("│  🗣️  Languages: " + g.languages);
     lines.push("│  📐 Area: " + g.country_area + " km²");
     lines.push("│  👥 Population: " + g.country_population);
-    lines.push("│  🌐 Continent: " + g.continent_code + (g.in_eu ? " (EU)" : ""));
+    lines.push("│  🌐 Continent: " + g.continent_code);
+    lines.push("│  🏛️  Capital: " + g.country_capital);
+    lines.push("│  🔗 TLD: " + g.country_tld);
+    lines.push("│  📞 Calling Code: +" + g.calling_code);
+    lines.push("│  🛡️  Proxy/VPN: " + (g.is_proxy ? "⚠️  Yes" : "No"));
     lines.push("│");
     lines.push("│  ─── Network ───");
     lines.push("│  🔌 ISP: " + net.isp);
