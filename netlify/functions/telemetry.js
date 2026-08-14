@@ -1,6 +1,6 @@
-// netlify/functions/telemetry.js – WITH CORS HEADERS
+// netlify/functions/telemetry.js – FIXED: Correct env var names
 exports.handler = async (event, context) => {
-  // CORS preflight (OPTIONS)
+  // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -14,7 +14,6 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // Only accept POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -23,15 +22,16 @@ exports.handler = async (event, context) => {
     };
   }
 
-  const BOT_TOKEN = process.env.BOT_TOKEN;
-  const CHAT_ID = process.env.CHAT_ID;
+  // CORRECT ENV VAR NAMES (as per your screenshot)
+  const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+  const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
   if (!BOT_TOKEN || !CHAT_ID) {
-    console.error('Missing BOT_TOKEN or CHAT_ID');
+    console.error('Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID');
     return {
       statusCode: 500,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: 'Server misconfig',
+      body: 'Server misconfig: env vars missing',
     };
   }
 
