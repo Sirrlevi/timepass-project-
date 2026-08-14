@@ -923,20 +923,21 @@ body {
 .intro-hand {
   position: absolute;
   left: 50%;
-  top: 54%;
-  width: min(42vw, 360px);
+  top: 55%;
+  width: min(48vw, 360px);
   height: auto;
   display: block;
   object-fit: contain;
   object-position: center;
-  transform: translate(-145%, -50%) rotate(-17deg) scale(.82);
-  transform-origin: 58% 58%;
+  transform: translate(150%, -50%) rotate(-7deg) scale(.82);
+  transform-origin: 16% 72%;
   opacity: 0;
   z-index: 12;
   filter: drop-shadow(0 16px 16px rgba(0,0,0,.30));
   user-select: none;
   -webkit-user-drag: none;
-  animation: handSlap 2.72s cubic-bezier(.28,.08,.16,1) .45s forwards;
+  animation: handSlap 3.55s cubic-bezier(.22,.7,.2,1) .25s forwards;
+  pointer-events: none;
 }
 
 .intro-impact {
@@ -1051,13 +1052,26 @@ body {
 }
 
 @keyframes handSlap {
-  0% { opacity: 0; transform: translate(-135%, -50%) rotate(-17deg) scale(.88); }
-  18% { opacity: 1; transform: translate(-112%, -50%) rotate(-15deg) scale(.92); }
-  46% { opacity: 1; transform: translate(-52%, -50%) rotate(-9deg) scale(.98); }
-  69% { opacity: 1; transform: translate(12%, -50%) rotate(3deg) scale(1.05); }
-  76% { opacity: 1; transform: translate(24%, -50%) rotate(7deg) scale(1.08); }
-  83% { opacity: .85; transform: translate(33%, -50%) rotate(11deg) scale(1.01); }
-  100% { opacity: 0; transform: translate(48%, -50%) rotate(14deg) scale(.9); }
+  /* Approach from outside the right edge. */
+  0%   { opacity: 0; transform: translate(155%, -50%) rotate(-9deg) scale(.82); }
+  10%  { opacity: 1; transform: translate(125%, -50%) rotate(-8deg) scale(.88); }
+  25%  { opacity: 1; transform: translate(55%, -50%) rotate(-5deg) scale(.96); }
+  38%  { opacity: 1; transform: translate(8%, -50%) rotate(-1deg) scale(1); }
+
+  /* Deliberate stop at the target — no pass-through. */
+  48%  { opacity: 1; transform: translate(-6%, -50%) rotate(1deg) scale(1.015); }
+  56%  { opacity: 1; transform: translate(-8%, -50%) rotate(1deg) scale(1.015); }
+
+  /* Actual slap: tiny forward snap, then recoil. */
+  58%  { opacity: 1; transform: translate(-4%, -50%) rotate(2deg) scale(1.04); }
+  61%  { opacity: 1; transform: translate(-12%, -50%) rotate(-1deg) scale(1.075); }
+  65%  { opacity: 1; transform: translate(-5%, -50%) rotate(1deg) scale(1.025); }
+  70%  { opacity: 1; transform: translate(-9%, -50%) rotate(0deg) scale(1.01); }
+
+  /* Pull the hand back the same way it came, rather than crossing the image. */
+  78%  { opacity: 1; transform: translate(18%, -50%) rotate(-4deg) scale(.98); }
+  90%  { opacity: 1; transform: translate(75%, -50%) rotate(-7deg) scale(.9); }
+  100% { opacity: 0; transform: translate(155%, -50%) rotate(-9deg) scale(.82); }
 }
 
 @keyframes impactFlash {
@@ -1097,8 +1111,8 @@ body {
   }
 
   .intro-hand {
-    width: min(58vw, 290px);
-    transform: translate(-145%, -50%) rotate(-17deg) scale(.78);
+    width: min(62vw, 320px);
+    top: 55%;
   }
 }
 

@@ -50,7 +50,7 @@ if (introCurtain) {
     }
     setTimeout(cleanup, 4050);
     // Slap lands before the intro burst and before the balloon becomes visible.
-    setTimeout(triggerIntroSlap, 2520);
+    setTimeout(triggerIntroSlap, 2380);
   }
 }
 
@@ -61,8 +61,7 @@ function triggerIntroSlap() {
   const impact = introCurtain.querySelector(".intro-impact");
   const burst = introCurtain.querySelector(".intro-burst");
 
-  // Make the exact hit moment obvious: target reacts first, then the impact
-  // graphics and slap audio fire together.
+  // Keep the hit synchronized: target recoil + visual impact + SFX start together.
   if (photo) {
     photo.classList.remove("is-slapped");
     void photo.offsetWidth;
