@@ -50,7 +50,7 @@ if (introCurtain) {
     }
     setTimeout(cleanup, 4050);
     // Slap lands before the intro burst and before the balloon becomes visible.
-    setTimeout(triggerIntroSlap, 2380);
+    setTimeout(triggerIntroSlap, 2550);
   }
 }
 

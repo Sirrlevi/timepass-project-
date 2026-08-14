@@ -920,23 +920,23 @@ body {
   z-index: 3;
 }
 
-.intro-hand {
+ .intro-hand {
   position: absolute;
   left: 50%;
-  top: 55%;
-  width: min(48vw, 360px);
+  top: 67%;
+  width: min(55vw, 360px);
   height: auto;
   display: block;
   object-fit: contain;
   object-position: center;
-  transform: translate(150%, -50%) rotate(-7deg) scale(.82);
-  transform-origin: 16% 72%;
+  transform: translate(-42%, -50%) rotate(-8deg) scale(.82);
+  transform-origin: 18% 72%;
   opacity: 0;
   z-index: 12;
-  filter: drop-shadow(0 16px 16px rgba(0,0,0,.30));
+  filter: drop-shadow(0 14px 14px rgba(0,0,0,.34));
   user-select: none;
   -webkit-user-drag: none;
-  animation: handSlap 3.55s cubic-bezier(.22,.7,.2,1) .25s forwards;
+  animation: handSlap 3.35s cubic-bezier(.22,.7,.2,1) .20s forwards;
   pointer-events: none;
 }
 
@@ -1052,26 +1052,25 @@ body {
 }
 
 @keyframes handSlap {
-  /* Approach from outside the right edge. */
-  0%   { opacity: 0; transform: translate(155%, -50%) rotate(-9deg) scale(.82); }
-  10%  { opacity: 1; transform: translate(125%, -50%) rotate(-8deg) scale(.88); }
-  25%  { opacity: 1; transform: translate(55%, -50%) rotate(-5deg) scale(.96); }
-  38%  { opacity: 1; transform: translate(8%, -50%) rotate(-1deg) scale(1); }
+  /* Enter from the right, but keep the whole hand travelling toward the target. */
+  0%   { opacity: 0; transform: translate(155%, -50%) rotate(-10deg) scale(.80); }
+  10%  { opacity: 1; transform: translate(115%, -50%) rotate(-9deg) scale(.86); }
+  25%  { opacity: 1; transform: translate(55%, -50%) rotate(-7deg) scale(.93); }
+  40%  { opacity: 1; transform: translate(5%, -50%) rotate(-4deg) scale(.98); }
+  53%  { opacity: 1; transform: translate(-30%, -50%) rotate(-2deg) scale(1); }
+  61%  { opacity: 1; transform: translate(-42%, -50%) rotate(-1deg) scale(1.01); }
+  67%  { opacity: 1; transform: translate(-44%, -50%) rotate(-1deg) scale(1.01); }
 
-  /* Deliberate stop at the target — no pass-through. */
-  48%  { opacity: 1; transform: translate(-6%, -50%) rotate(1deg) scale(1.015); }
-  56%  { opacity: 1; transform: translate(-8%, -50%) rotate(1deg) scale(1.015); }
+  /* Contact: the palm stops directly over the target before the snap. */
+  70%  { opacity: 1; transform: translate(-44%, -50%) rotate(-1deg) scale(1.01); }
+  72%  { opacity: 1; transform: translate(-38%, -50%) rotate(1deg) scale(1.055); }
+  74%  { opacity: 1; transform: translate(-47%, -50%) rotate(-1deg) scale(1.035); }
+  78%  { opacity: 1; transform: translate(-43%, -50%) rotate(0deg) scale(1.01); }
 
-  /* Actual slap: tiny forward snap, then recoil. */
-  58%  { opacity: 1; transform: translate(-4%, -50%) rotate(2deg) scale(1.04); }
-  61%  { opacity: 1; transform: translate(-12%, -50%) rotate(-1deg) scale(1.075); }
-  65%  { opacity: 1; transform: translate(-5%, -50%) rotate(1deg) scale(1.025); }
-  70%  { opacity: 1; transform: translate(-9%, -50%) rotate(0deg) scale(1.01); }
-
-  /* Pull the hand back the same way it came, rather than crossing the image. */
-  78%  { opacity: 1; transform: translate(18%, -50%) rotate(-4deg) scale(.98); }
-  90%  { opacity: 1; transform: translate(75%, -50%) rotate(-7deg) scale(.9); }
-  100% { opacity: 0; transform: translate(155%, -50%) rotate(-9deg) scale(.82); }
+  /* Recoil back toward the same side it entered from. */
+  84%  { opacity: 1; transform: translate(-18%, -50%) rotate(-5deg) scale(.97); }
+  92%  { opacity: 1; transform: translate(55%, -50%) rotate(-9deg) scale(.88); }
+  100% { opacity: 0; transform: translate(155%, -50%) rotate(-10deg) scale(.80); }
 }
 
 @keyframes impactFlash {
@@ -1111,8 +1110,8 @@ body {
   }
 
   .intro-hand {
-    width: min(62vw, 320px);
-    top: 55%;
+    width: min(55vw, 360px);
+    top: 67%;
   }
 }
 
