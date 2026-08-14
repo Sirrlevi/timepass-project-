@@ -47,7 +47,7 @@ if (introCurtain) {
     if (rightPanel) {
       rightPanel.addEventListener("animationend", cleanup, { once: true });
     }
-    setTimeout(cleanup, 2200);
+    setTimeout(cleanup, 3600);
   }
 }
 
