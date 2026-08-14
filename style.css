@@ -892,10 +892,46 @@ body {
   transform: scale(.88);
 }
 
+/* Persistent "tap me" affordance — a soft ripple ring so it's clear
+   the hearts (unlike the decorative sparks/petals) are interactive. */
+.heart::after {
+  content: "";
+  position: absolute;
+  inset: -42%;
+  border-radius: 50%;
+  border: 1px solid rgba(178, 77, 110, .45);
+  opacity: 0;
+  transform: scale(.6);
+  pointer-events: none;
+  animation: heartInvite 3.4s ease-in-out infinite;
+}
+
+.h1::after { animation-delay: .2s; }
+.h2::after { animation-delay: 1.1s; }
+.h3::after { animation-delay: .6s; }
+.h4::after { animation-delay: 1.9s; }
+.h5::after { animation-delay: 1.4s; }
+.h6::after { animation-delay: .9s; }
+.h7::after { animation-delay: 2.3s; }
+.h8::after { animation-delay: 1.6s; }
+
+@keyframes heartInvite {
+  0% { opacity: 0; transform: scale(.55); }
+  16% { opacity: .6; transform: scale(1); }
+  45% { opacity: 0; transform: scale(1.45); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+
+/*
+  Positioned precisely in JS (left/top in px, computed from the note's
+  real rendered size and the current viewport) rather than assumed via
+  a fixed transform — this is what keeps it fully on-screen on any
+  device size. --note-arrow-left is also set in JS so the little arrow
+  still points at the heart even when the box itself gets shifted to
+  stay in bounds.
+*/
 .love-note {
   position: fixed;
-  top: var(--note-top, 50%);
-  left: var(--note-left, 50%);
   max-width: min(78vw, 280px);
   padding: 12px 17px;
   border-radius: 14px;
@@ -912,14 +948,14 @@ body {
   z-index: 55;
   opacity: 0;
   pointer-events: none;
-  transform: translate(-50%, calc(-100% - 20px)) scale(.9);
+  transform: translateY(8px) scale(.9);
   transition: opacity .35s ease, transform .35s ease;
 }
 
 .love-note::after {
   content: "";
   position: absolute;
-  left: 50%;
+  left: var(--note-arrow-left, 50%);
   bottom: -7px;
   width: 12px;
   height: 12px;
@@ -930,7 +966,7 @@ body {
 }
 
 .love-note.note-below {
-  transform: translate(-50%, 20px) scale(.9);
+  transform: translateY(-8px) scale(.9);
 }
 
 .love-note.note-below::after {
@@ -945,20 +981,54 @@ body {
 
 .love-note.is-visible {
   opacity: 1;
-  transform: translate(-50%, calc(-100% - 14px)) scale(1);
-}
-
-.love-note.note-below.is-visible {
-  transform: translate(-50%, 14px) scale(1);
+  transform: translateY(0) scale(1);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .love-note {
     transition: opacity .2s ease;
   }
+
+  .heart::after {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+}
+
+/* ---------- ONE-TIME HEART HINT ---------- */
+
+.hint-toast {
+  position: fixed;
+  top: 4%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -10px);
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: linear-gradient(160deg, var(--shine), var(--bg));
+  border: 1px solid rgba(173, 135, 72, .45);
+  color: var(--romantic-dark);
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(12px, 1.6vw, 15px);
+  letter-spacing: .02em;
+  text-align: center;
+  box-shadow: 0 8px 18px rgba(79, 44, 62, .16);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 62;
+  max-width: min(86vw, 340px);
+  transition: opacity .5s ease, transform .5s ease;
+}
+
+.hint-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 /* ---------- CONFETTI BURST ---------- */
+
 
 .confetti-field {
   position: absolute;

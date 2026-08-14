@@ -143,7 +143,10 @@ async function burstBalloonAndPlay() {
   // Remove both balloon and instruction completely after the burst.
   setTimeout(() => {
     balloonOverlay.classList.add("burst-away");
-    setTimeout(() => balloonOverlay.remove(), 700);
+    setTimeout(() => {
+      balloonOverlay.remove();
+      setTimeout(showHeartHint, 700);
+    }, 700);
   }, 520);
 }
 
@@ -272,23 +275,61 @@ const LOVE_NOTES = [
 let activeNote = null;
 let noteTimer;
 
+// Positions the note using its *actual* rendered width/height against the
+// *current* viewport, then clamps both axes so it can never spill off any
+// edge — this is what makes it correct on phones, tablets, and desktops
+// alike, instead of guessing a fixed offset.
 function showLoveNote(target) {
-  if (activeNote) activeNote.remove();
+  if (activeNote) {
+    activeNote.remove();
+    activeNote = null;
+  }
 
   const note = document.createElement("div");
   note.className = "love-note";
   note.textContent = LOVE_NOTES[Math.floor(Math.random() * LOVE_NOTES.length)];
+  note.style.visibility = "hidden";
+  note.style.left = "0px";
+  note.style.top = "0px";
   document.body.appendChild(note);
   activeNote = note;
 
-  const rect = target.getBoundingClientRect();
-  const top = rect.top;
-  const left = rect.left + rect.width / 2;
-  note.style.setProperty("--note-top", `${top}px`);
-  note.style.setProperty("--note-left", `${Math.min(Math.max(left, 90), window.innerWidth - 90)}px`);
+  const margin = 12;
+  const gap = 14;
+  const heartRect = target.getBoundingClientRect();
+  const noteRect = note.getBoundingClientRect();
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
 
-  const showBelow = rect.top < 130;
+  // Horizontal: center on the heart, then clamp fully inside the viewport.
+  let left = heartRect.left + heartRect.width / 2 - noteRect.width / 2;
+  left = Math.min(Math.max(left, margin), viewportW - noteRect.width - margin);
+
+  // Vertical: prefer above the heart; flip below if there isn't room.
+  const spaceAbove = heartRect.top;
+  const spaceBelow = viewportH - heartRect.bottom;
+  const showBelow = spaceAbove < noteRect.height + gap + margin && spaceBelow > spaceAbove;
+
+  let top;
+  if (showBelow) {
+    top = heartRect.bottom + gap;
+    top = Math.min(top, viewportH - noteRect.height - margin);
+  } else {
+    top = heartRect.top - noteRect.height - gap;
+    top = Math.max(top, margin);
+  }
+
+  // Arrow stays pointed at the heart even though the box itself shifted.
+  const arrowLeft = Math.min(
+    Math.max(heartRect.left + heartRect.width / 2 - left, 18),
+    noteRect.width - 18
+  );
+
+  note.style.left = `${left}px`;
+  note.style.top = `${top}px`;
+  note.style.setProperty("--note-arrow-left", `${arrowLeft}px`);
   note.classList.toggle("note-below", showBelow);
+  note.style.visibility = "visible";
 
   requestAnimationFrame(() => note.classList.add("is-visible"));
 
@@ -313,3 +354,15 @@ document.querySelectorAll(".heart").forEach((heart) => {
     }
   });
 });
+
+// A gentle one-time nudge so it's clear the hearts are tappable, shown
+// once the balloon intro is out of the way. The soft ripple ring on each
+// heart (see CSS) then stays as a permanent reminder after this fades.
+const heartHint = document.getElementById("heartHint");
+
+function showHeartHint() {
+  if (!heartHint) return;
+  heartHint.textContent = "🩷 tap the floating hearts for a little surprise";
+  requestAnimationFrame(() => heartHint.classList.add("is-visible"));
+  setTimeout(() => heartHint.classList.remove("is-visible"), 4200);
+}
