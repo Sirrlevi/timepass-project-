@@ -47,10 +47,41 @@ if (introCurtain) {
     if (rightPanel) {
       rightPanel.addEventListener("animationend", cleanup, { once: true });
     }
-    setTimeout(cleanup, 3600);
+    setTimeout(cleanup, 4050);
     // Slap lands before the intro burst and before the balloon becomes visible.
-    setTimeout(playSlapSound, 2050);
+    setTimeout(triggerIntroSlap, 2520);
   }
+}
+
+
+function triggerIntroSlap() {
+  if (!introCurtain) return;
+  const photo = introCurtain.querySelector(".intro-photo");
+  const impact = introCurtain.querySelector(".intro-impact");
+  const burst = introCurtain.querySelector(".intro-burst");
+
+  // Make the exact hit moment obvious: target reacts first, then the impact
+  // graphics and slap audio fire together.
+  if (photo) {
+    photo.classList.remove("is-slapped");
+    void photo.offsetWidth;
+    photo.classList.add("is-slapped");
+    setTimeout(() => photo.classList.remove("is-slapped"), 800);
+  }
+
+  if (impact) {
+    impact.classList.remove("is-active");
+    void impact.offsetWidth;
+    impact.classList.add("is-active");
+  }
+
+  if (burst) {
+    burst.classList.remove("is-active");
+    void burst.offsetWidth;
+    burst.classList.add("is-active");
+  }
+
+  playSlapSound();
 }
 
 
