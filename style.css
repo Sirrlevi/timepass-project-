@@ -1132,16 +1132,19 @@ body {
   transform: scale(.88);
 }
 
-/* Persistent "tap me" affordance — a soft ripple ring so it's clear
-   the hearts (unlike the decorative sparks/petals) are interactive. */
+/* Heart‑shaped pulse ring — now uses the heart character with a stroke */
 .heart::after {
-  content: "";
+  content: "♥";
   position: absolute;
-  inset: -42%;
-  border-radius: 50%;
-  border: 1px solid rgba(178, 77, 110, .45);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  font-size: 2.4em;
+  font-family: Georgia, serif;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(178, 77, 110, .45);
+  text-stroke: 1px rgba(178, 77, 110, .45);
   opacity: 0;
-  transform: scale(.6);
   pointer-events: none;
   animation: heartInvite 3.4s ease-in-out infinite;
 }
@@ -1156,10 +1159,22 @@ body {
 .h8::after { animation-delay: 1.6s; }
 
 @keyframes heartInvite {
-  0% { opacity: 0; transform: scale(.55); }
-  16% { opacity: .6; transform: scale(1); }
-  45% { opacity: 0; transform: scale(1.45); }
-  100% { opacity: 0; transform: scale(1.45); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.55);
+  }
+  16% {
+    opacity: .6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  45% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.45);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.45);
+  }
 }
 
 /*
@@ -1315,52 +1330,14 @@ body {
   }
 }
 
-
-/* ---------- OPTIONAL VISITOR DIAGNOSTICS CONSENT ---------- */
-.telemetry-consent {
-  position: fixed;
-  top: max(8px, env(safe-area-inset-top));
-  right: max(8px, env(safe-area-inset-right));
-  z-index: 1000;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 7px;
-  border-radius: 999px;
-  background: rgba(222, 225, 211, .88);
-  border: 1px solid rgba(178, 77, 110, .22);
-  box-shadow: 0 3px 10px rgba(55, 32, 45, .10);
-  color: #6b2e48;
-  font: 600 10px/1 Arial, Helvetica, sans-serif;
-  letter-spacing: .01em;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  user-select: none;
-}
-
-.telemetry-consent input {
-  width: 13px;
-  height: 13px;
-  margin: 0;
-  accent-color: #b24d6e;
-  cursor: pointer;
-}
-
-.telemetry-consent span {
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-@media (max-width: 650px) {
-  .telemetry-consent {
-    top: max(7px, env(safe-area-inset-top));
-    right: max(7px, env(safe-area-inset-right));
-    padding: 4px 6px;
-    font-size: 9px;
-  }
-
-  .telemetry-consent input {
-    width: 12px;
-    height: 12px;
-  }
+/* Explicit balloon-consent subline */
+.balloon-text small {
+  display: block;
+  margin-top: 7px;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: clamp(9px, 1.45vw, 12px);
+  font-weight: 600;
+  letter-spacing: .025em;
+  opacity: .82;
+  text-transform: lowercase;
 }

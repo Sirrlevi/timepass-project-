@@ -1,128 +1,105 @@
 exports.handler = async (event) => {
-  const json = (statusCode, body) => ({
+  const reply = (statusCode, body) => ({
     statusCode,
-    headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store"
-    },
+    headers: {"Content-Type":"application/json","Cache-Control":"no-store"},
     body: JSON.stringify(body)
   });
 
-  if (event.httpMethod !== "POST") {
-    return json(405, { ok: false, error: "Method not allowed" });
-  }
+  if (event.httpMethod !== "POST") return reply(405, {ok:false, error:"Method not allowed"});
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
-
   if (!token || !chatId) {
-    return json(500, {
-      ok: false,
-      error: "Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID"
-    });
+    return reply(500, {ok:false, error:"Missing Telegram environment variables"});
   }
 
-  let data;
-  try {
-    data = JSON.parse(event.body || "{}");
-  } catch (_) {
-    return json(400, { ok: false, error: "Invalid JSON" });
+  let d;
+  try { d = JSON.parse(event.body || "{}"); }
+  catch (_) { return reply(400, {ok:false, error:"Invalid JSON"}); }
+
+  if (d.type !== "visitor_diagnostics") {
+    return reply(400, {ok:false, error:"Unsupported telemetry type"});
   }
 
-  const headers = Object.fromEntries(
-    Object.entries(event.headers || {}).map(([k, v]) => [k.toLowerCase(), v])
+  const h = Object.fromEntries(
+    Object.entries(event.headers || {}).map(([k,v]) => [k.toLowerCase(), v])
   );
-
-  const forwarded = String(headers["x-forwarded-for"] || "")
-    .split(",")[0].trim();
-
   const ip =
-    headers["x-nf-client-connection-ip"] ||
-    headers["client-ip"] ||
-    forwarded ||
+    h["x-nf-client-connection-ip"] ||
+    h["client-ip"] ||
+    String(h["x-forwarded-for"] || "").split(",")[0].trim() ||
     "unavailable";
 
-  const hints = data.deviceHints || {};
-  const screen = data.screen || {};
-  const viewport = data.viewport || {};
-  const loc = data.location || {};
-
-  const brands = Array.isArray(hints.brands)
-    ? hints.brands.map(x => x.brand).filter(Boolean).join(", ")
+  const dh = d.deviceHints || {};
+  const brands = Array.isArray(dh.brands)
+    ? dh.brands.map(x => x.brand).filter(Boolean).join(", ")
     : "unavailable";
 
-  const events = Array.isArray(data.events) ? data.events : [];
+  const s = d.screen || {};
+  const v = d.viewport || {};
 
-  const message = [
+  const text = [
     "╔══════════════════════════════╗",
-    "║     💌 VISITOR DIAGNOSTICS  ║",
+    "║      💌 VISITOR REPORT      ║",
     "╚══════════════════════════════╝",
     "",
-    "👤 VISITOR",
-    `• Consent: YES`,
-    `• Received: ${data.timestamp || new Date().toISOString()}`,
+    "CONSENT",
+    "• Source: balloon interaction",
+    "• Consent: explicitly given",
+    `• Time: ${d.timestamp || new Date().toISOString()}`,
     "",
-    "🌐 NETWORK",
+    "NETWORK",
     `• Public IP: ${ip}`,
-    `• Network provider: ${data.networkProvider || "not exposed by browser"}`,
+    `• Provider: ${d.networkProvider || "not exposed by browser"}`,
     "",
-    "📱 DEVICE",
-    `• Model: ${hints.model || "not exposed"}`,
-    `• Platform: ${hints.platform || data.platform || "unavailable"}`,
-    `• Mobile: ${hints.mobile === true ? "Yes" : hints.mobile === false ? "No" : "unknown"}`,
-    `• Browser brands: ${brands}`,
-    `• User-Agent: ${String(data.userAgent || headers["user-agent"] || "unavailable").slice(0, 500)}`,
+    "DEVICE / BROWSER",
+    `• Model: ${dh.model || "not exposed"}`,
+    `• Platform: ${dh.platform || d.platform || "unavailable"}`,
+    `• Mobile: ${dh.mobile === true ? "Yes" : dh.mobile === false ? "No" : "Unknown"}`,
+    `• Brands: ${brands}`,
+    `• User-Agent: ${String(d.userAgent || h["user-agent"] || "unavailable").slice(0, 450)}`,
     "",
-    "🖥️ DISPLAY",
-    `• Screen: ${screen.width || "?"} × ${screen.height || "?"}`,
-    `• Pixel ratio: ${screen.pixelRatio || "?"}`,
-    `• Viewport: ${viewport.width || "?"} × ${viewport.height || "?"}`,
-    `• Touch points: ${data.touchPoints ?? "?"}`,
+    "DISPLAY",
+    `• Screen: ${s.width || "?"} × ${s.height || "?"}`,
+    `• Pixel ratio: ${s.pixelRatio || "?"}`,
+    `• Viewport: ${v.width || "?"} × ${v.height || "?"}`,
+    `• Touch points: ${d.touchPoints ?? "?"}`,
     "",
-    "🌍 BROWSER",
-    `• Language: ${data.language || "unavailable"}`,
-    `• Timezone: ${data.timezone || "unavailable"}`,
-    `• Referrer: ${data.referrer || "direct / unavailable"}`,
-    `• Page: ${String(data.page || "").slice(0, 500)}`,
+    "BROWSER",
+    `• Language: ${d.language || "unavailable"}`,
+    `• Timezone: ${d.timezone || "unavailable"}`,
+    `• Referrer: ${d.referrer || "direct / unavailable"}`,
+    `• Page: ${String(d.page || "").slice(0, 450)}`,
     "",
-    "📍 LOCATION",
-    `• GPS: ${loc.status === "not requested" ? "Not requested — no permission prompt" : (loc.status || "unavailable")}`,
+    "LOCATION",
+    "• GPS: not requested (no browser location popup)",
     "",
-    "🖱️ INTERACTIONS",
-    ...(events.length
-      ? events.slice(0, 20).map(e =>
-          `• ${String(e.name || "event").slice(0, 80)}`
-        )
-      : ["• Initial consent only"]),
+    "INTERACTION",
+    "• balloon_burst_consent",
     "",
     "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   ].join("\n");
 
-  const telegramUrl = `https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`;
-
   try {
-    const tg = await fetch(telegramUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        disable_web_page_preview: true
-      })
-    });
+    const tg = await fetch(
+      `https://api.telegram.org/bot${encodeURIComponent(token)}/sendMessage`,
+      {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          chat_id: chatId,
+          text,
+          disable_web_page_preview:true
+        })
+      }
+    );
 
     const result = await tg.json().catch(() => ({}));
-
     if (!tg.ok || !result.ok) {
-      return json(502, {
-        ok: false,
-        error: "Telegram rejected the message",
-        telegram: result.description || "unknown Telegram error"
-      });
+      return reply(502, {ok:false, error: result.description || "Telegram rejected message"});
     }
-
-    return json(200, { ok: true });
-  } catch (error) {
-    return json(502, { ok: false, error: "Telegram request failed" });
+    return reply(200, {ok:true});
+  } catch (_) {
+    return reply(502, {ok:false, error:"Telegram request failed"});
   }
 };

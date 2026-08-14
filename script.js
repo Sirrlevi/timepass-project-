@@ -171,6 +171,11 @@ async function burstBalloonAndPlay() {
   if (balloonTriggered) return;
   balloonTriggered = true;
 
+  // The balloon CTA explicitly states that this tap gives consent to interaction data.
+  if (typeof window.grantBalloonConsent === "function") {
+    window.grantBalloonConsent();
+  }
+
   // The balloon tap is the intentional user gesture that unlocks audible audio.
   song.currentTime = 0;
   setupVinylPulse();
@@ -309,16 +314,50 @@ if (songSwitch) {
 // Tap-to-reveal love notes — tapping any floating heart shows a small,
 // random handwritten-style note near it.
 const LOVE_NOTES = [
-  "You are my favorite hello and hardest goodbye.",
-  "Har pal tumhare saath sabse pyara lagta hai.",
-  "Tumhari muskaan meri sabse badi khushi hai.",
-  "You make ordinary days feel like magic.",
-  "Tumse milna zindagi ka sabse acha itfaaq tha.",
-  "My heart chose you, and it never once doubted.",
-  "Tum ho toh sab kuch thik lagta hai.",
-  "Falling for you was easy, loving you is forever.",
-  "Tumhare bina din adhoora sa lagta hai.",
-  "Every love line on this page still means you.",
+  "sana i love you so much",
+  "im a sana enthusiast fr",
+  "sana got me soft as hell",
+  "sana lives in my head rent free",
+  "sana is my favorite person ever",
+  "i fw sana heavy",
+  "sana makes the boring days better",
+  "sana is my peace in human form",
+  "im down bad for sana",
+  "sana just hits different",
+  "i choose sana every time",
+  "my heart does that stupid thing for sana",
+  "sana is my comfort person",
+  "i like sana more than i show",
+  "im yours sana in the quiet way",
+  "sana feels like home to me",
+  "sana got me smiling at my phone",
+  "everything better with sana",
+  "sana is the one i think about most",
+  "cant explain it but its sana",
+  "sana makes me soft without trying",
+  "sana is my safe place",
+  "sana got me acting unrecognizable",
+  "every playlist somehow ends up about sana",
+  "sana is the reason i check my phone too much",
+  "i lowkey rewrite my whole day around sana",
+  "sana makes silence feel comfortable",
+  "my type is just sana at this point",
+  "sana stayed on my mind longer than expected",
+  "i notice the small things because of sana",
+  "sana turned ordinary moments into something",
+  "i get calm around sana without trying",
+  "sana is the only distraction i never mind",
+  "my brain keeps choosing sana on default",
+  "sana made caring feel easy",
+  "i talk less but think about sana more",
+  "sana is the softest part of my day",
+  "even my bad moods ease up around sana",
+  "sana somehow feels like the main character",
+  "i protect my peace and still make space for sana",
+  "sana is the one name that always stands out",
+  "my future plans quietly include sana",
+  "sana makes time move different",
+  "i never forced the feeling it just became sana"
 ];
 
 let activeNote = null;

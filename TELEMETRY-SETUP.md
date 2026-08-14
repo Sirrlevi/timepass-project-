@@ -1,40 +1,17 @@
-# Netlify visitor diagnostics
+# Balloon consent telemetry
 
-A small checkbox in the top-right corner controls telemetry:
+The balloon text explicitly says:
 
-**share visitor diagnostics**
+“tap to burst balloon 🎈 & give consent to interact data”
 
-Nothing is sent until it is checked.
+The visitor’s balloon tap is the explicit consent action. No separate checkbox or location permission prompt is used.
 
-## Netlify environment variables
+Set these Netlify environment variables:
 
-Set these in Netlify → Site configuration → Environment variables:
+- TELEGRAM_BOT_TOKEN
+- TELEGRAM_CHAT_ID
 
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_CHAT_ID`
+The function sends only browser/server information that is actually exposed:
+IP observed by the Netlify Function, browser/UA, available User-Agent Client Hints (including model where supported), screen, viewport, language, timezone, referrer, and the balloon interaction.
 
-Keep both values server-side. Never paste them into frontend JavaScript.
-
-## Important location behavior
-
-This version intentionally does **not** call the browser Geolocation API.
-
-Therefore checking the box does **not** trigger the browser's location permission popup.
-
-The Telegram message will explicitly report:
-
-`GPS: Not requested — no permission prompt`
-
-A normal webpage cannot silently obtain precise GPS coordinates without the browser's location permission mechanism.
-
-## Immediate delivery
-
-When the checkbox is checked, the initial diagnostics request is sent immediately to:
-
-`/.netlify/functions/telemetry`
-
-The Netlify Function formats the data into a structured Telegram text message.
-
-## Browser limitations
-
-The standard browser APIs do not reliably expose mobile carrier/network provider. Device model is also only available when the browser provides the relevant User-Agent Client Hints.
+GPS is intentionally not requested, so no browser location permission popup appears.
