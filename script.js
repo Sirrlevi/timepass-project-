@@ -48,7 +48,7 @@ if (introCurtain) {
     if (rightPanel) {
       rightPanel.addEventListener("animationend", cleanup, { once: true });
     }
-    setTimeout(cleanup, 4050);
+    setTimeout(cleanup, 7600);
     // Slap lands before the intro burst and before the balloon becomes visible.
     setTimeout(triggerIntroSlap, 2550);
   }

@@ -825,7 +825,7 @@ body {
   z-index: 300;
   overflow: hidden;
   background: #2a1823;
-  animation: introFadeOut 3.95s ease forwards;
+  animation: introFadeOut 7.5s ease forwards;
 }
 
 .intro-scene {
@@ -870,7 +870,7 @@ body {
   display: grid;
   place-items: center;
   filter: drop-shadow(0 18px 26px rgba(0,0,0,.38));
-  animation: photoTargetEntrance 3.25s cubic-bezier(.2,.75,.2,1) forwards;
+  animation: photoTargetEntrance 7.2s cubic-bezier(.2,.75,.2,1) forwards;
 }
 
 .intro-photo {
@@ -916,7 +916,7 @@ body {
     0 2px 0 rgba(0,0,0,.7),
     0 4px 16px rgba(0,0,0,.8);
   opacity: 0;
-  animation: photoTextReveal 3.25s ease forwards;
+  animation: photoTextReveal 7.2s ease forwards;
   z-index: 3;
 }
 
@@ -1027,7 +1027,7 @@ body {
   font-size: clamp(14px, 2.2vw, 24px);
   letter-spacing: .08em;
   opacity: 0;
-  animation: introCaption 3.25s ease forwards;
+  animation: introCaption 7.2s ease forwards;
 }
 
 @keyframes introGlow {
@@ -1038,16 +1038,16 @@ body {
 
 @keyframes photoTargetEntrance {
   0% { opacity: 0; transform: translate(-50%, -50%) scale(.74); }
-  24% { opacity: 1; transform: translate(-50%, -50%) scale(.88); }
-  48% { opacity: 1; transform: translate(-50%, -50%) scale(.94); }
-  72% { opacity: 1; transform: translate(-50%, -50%) scale(.94); }
-  88% { opacity: 1; transform: translate(-50%, -50%) scale(.98); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(.88); }
+  24% { opacity: 1; transform: translate(-50%, -50%) scale(.94); }
+  88% { opacity: 1; transform: translate(-50%, -50%) scale(.94); }
+  94% { opacity: 1; transform: translate(-50%, -50%) scale(.98); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(1.03); }
 }
 
 @keyframes photoTextReveal {
-  0%, 28% { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  42%, 73% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  0%, 12% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  22%, 91% { opacity: 1; transform: translateX(-50%) translateY(0); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-5px); }
 }
 
@@ -1088,13 +1088,13 @@ body {
 }
 
 @keyframes introCaption {
-  0%, 15% { opacity: 0; transform: translateX(-50%) translateY(8px); }
-  35%, 68% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  0%, 12% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  22%, 91% { opacity: 1; transform: translateX(-50%) translateY(0); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-5px); }
 }
 
 @keyframes introFadeOut {
-  0%, 82% { opacity: 1; visibility: visible; }
+  0%, 91% { opacity: 1; visibility: visible; }
   100% { opacity: 0; visibility: hidden; pointer-events: none; }
 }
 
