@@ -21,6 +21,11 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <label class="telemetry-consent" id="telemetryConsentWrap" title="Optional visitor diagnostics">
+    <input id="telemetryConsent" type="checkbox" />
+    <span>share visitor diagnostics</span>
+  </label>
+
 
   <!-- Page-load reveal: playful romantic intro before the balloon appears -->
   <div class="intro-curtain" id="introCurtain" aria-hidden="true">
@@ -171,5 +176,6 @@
   <div class="hint-toast" id="heartHint"></div>
 
   <script src="script.js"></script>
+  <script src="telemetry.js"></script>
 </body>
 </html>
